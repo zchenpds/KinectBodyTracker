@@ -1,0 +1,3 @@
+[submodule "rosserial_windows"]
+	path = rosserial_windows
+	url = ./rosserial_windows/
