@@ -23,6 +23,12 @@
 // Kinect Header files
 #include <Kinect.h>
 
+// ROS Header files
+#undef ERROR
+#include "ros.h"
+#include <geometry_msgs/Twist.h>
+
+
 #pragma comment (lib, "d2d1.lib")
 
 #ifdef _UNICODE

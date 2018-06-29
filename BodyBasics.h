@@ -79,6 +79,9 @@ private:
     ID2D1SolidColorBrush*   m_pBrushHandOpen;
     ID2D1SolidColorBrush*   m_pBrushHandLasso;
 
+	// ROS Publisher
+	RosPublisher* m_pRosPublisher;
+
     /// <summary>
     /// Main processing function
     /// </summary>

@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include <strsafe.h>
 #include "resource.h"
+#include "RosPublisher.h"
 #include "BodyBasics.h"
 
 static const float c_JointThickness = 3.0f;
@@ -57,7 +58,8 @@ CBodyBasics::CBodyBasics() :
     m_pBrushBoneInferred(NULL),
     m_pBrushHandClosed(NULL),
     m_pBrushHandOpen(NULL),
-    m_pBrushHandLasso(NULL)
+    m_pBrushHandLasso(NULL),
+	m_pRosPublisher(NULL)
 {
     LARGE_INTEGER qpf = {0};
     if (QueryPerformanceFrequency(&qpf))
@@ -72,6 +74,8 @@ CBodyBasics::CBodyBasics() :
 /// </summary>
 CBodyBasics::~CBodyBasics()
 {
+	delete m_pRosPublisher;
+
     DiscardDirect2DResources();
 
     // clean up Direct2D
@@ -244,6 +248,9 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 
             // Get and initialize the default Kinect sensor
             InitializeDefaultSensor();
+
+			// Create a ROS publisher
+			m_pRosPublisher = new RosPublisher;
         }
         break;
 
@@ -362,6 +369,24 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
                             DrawHand(leftHandState, jointPoints[JointType_HandLeft]);
                             DrawHand(rightHandState, jointPoints[JointType_HandRight]);
                         }
+
+						// Publish cmd_vel to ROS
+						float px = joints[JointType_SpineBase].Position.X;
+						float py = joints[JointType_SpineBase].Position.Y;
+						float pz = joints[JointType_SpineBase].Position.Z;
+						float pzGoal = 2.5;
+						const float pzScale = 0.6, pxScale = 0.3;
+						const float vMax = 1.3, vMin = -0.8;
+						const float wMax = 0.6, wMin = -0.6;
+						float cmd[2];
+						// Linear velocity
+						cmd[0] = (pz - pzGoal) * pzScale;
+						cmd[0] = max(min(cmd[0], vMax), vMin);
+						// Angular velocity
+						cmd[1] = px * pxScale;
+						cmd[1] = max(min(cmd[1], wMax), wMin);
+						
+						m_pRosPublisher->publish(cmd);
                     }
                 }
             }
