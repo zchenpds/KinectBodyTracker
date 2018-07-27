@@ -8,6 +8,12 @@
 #include <strsafe.h>
 #include "resource.h"
 #include "RosPublisher.h"
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
+#include <string>
+#include <Windows.h>
 #include "BodyBasics.h"
 
 static const float c_JointThickness = 3.0f;
@@ -66,6 +72,21 @@ CBodyBasics::CBodyBasics() :
     {
         m_fFreq = double(qpf.QuadPart);
     }
+
+	// Open a csv file
+	time_t rawtime; // the number of seconds elapsed since 1900 at 00:00 UTC
+	time(&rawtime); // obtain current time
+	struct tm *timeinfo = localtime(&rawtime); // represent current time using struct
+	std::stringstream ssFileName; // Construct the name of the csv file
+	ssFileName << "data-"
+		<< timeinfo->tm_year + 1900 << std::setfill('0')
+		<< std::setw(2) << timeinfo->tm_mon
+		<< std::setw(2) << timeinfo->tm_mday << "-"
+		<< std::setw(2) << timeinfo->tm_hour << "-"
+		<< std::setw(2) << timeinfo->tm_min << "-"
+		<< std::setw(2) << timeinfo->tm_sec << ".csv";
+	m_pCsvFile = new std::ofstream(ssFileName.str(), std::ofstream::out); // Open the csv file
+	//*m_pCsvFile << "123" << std::endl; // Test write
 }
   
 
@@ -75,7 +96,8 @@ CBodyBasics::CBodyBasics() :
 CBodyBasics::~CBodyBasics()
 {
 	delete m_pRosPublisher;
-
+	m_pCsvFile->close();
+	delete m_pCsvFile;
     DiscardDirect2DResources();
 
     // clean up Direct2D
@@ -324,6 +346,9 @@ HRESULT CBodyBasics::InitializeDefaultSensor()
 /// </summary>
 void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 {
+	int iClosest = -1; // the index of the body closest to the camera
+	float dSqrMin = 10.0; // squared x-z-distance of the closest body
+
     if (m_hWnd)
     {
         HRESULT hr = EnsureDirect2DResources();
@@ -348,7 +373,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 
                     if (SUCCEEDED(hr) && bTracked)
                     {
-                        Joint joints[JointType_Count]; 
+                        Joint joints[JointType_Count];
                         D2D1_POINT_2F jointPoints[JointType_Count];
                         HandState leftHandState = HandState_Unknown;
                         HandState rightHandState = HandState_Unknown;
@@ -368,25 +393,17 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 
                             DrawHand(leftHandState, jointPoints[JointType_HandLeft]);
                             DrawHand(rightHandState, jointPoints[JointType_HandRight]);
-                        }
 
-						// Publish cmd_vel to ROS
-						float px = joints[JointType_SpineBase].Position.X;
-						float py = joints[JointType_SpineBase].Position.Y;
-						float pz = joints[JointType_SpineBase].Position.Z;
-						float pzGoal = 2.5;
-						const float pzScale = 0.6, pxScale = 0.3;
-						const float vMax = 1.3, vMin = -0.8;
-						const float wMax = 0.6, wMin = -0.6;
-						float cmd[2];
-						// Linear velocity
-						cmd[0] = (pz - pzGoal) * pzScale;
-						cmd[0] = max(min(cmd[0], vMax), vMin);
-						// Angular velocity
-						cmd[1] = px * pxScale;
-						cmd[1] = max(min(cmd[1], wMax), wMin);
-						
-						m_pRosPublisher->publish(cmd);
+							// Find the closest body, if any.
+							float px = joints[JointType_SpineBase].Position.X;
+							float pz = joints[JointType_SpineBase].Position.Z;
+							float dSqr = px * px + pz * pz;
+							if (dSqrMin > dSqr)
+							{
+								dSqrMin = dSqr;
+								iClosest = i;
+							}
+						}
                     }
                 }
             }
@@ -402,11 +419,11 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
             }
         }
 
-        if (!m_nStartTime)
-        {
-            m_nStartTime = nTime;
-        }
-
+		if (!m_nStartTime)
+		{
+			m_nStartTime = nTime;
+		}
+		
         double fps = 0.0;
 
         LARGE_INTEGER qpcNow = {0};
@@ -431,6 +448,41 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
             m_nFramesSinceUpdate = 0;
         }
     }
+
+	// Process the closest body, if any.
+	if (iClosest > -1)
+	{
+		Joint joints[JointType_Count];
+		ppBodies[iClosest]->GetJoints(_countof(joints), joints);
+
+		// Publish cmd_vel to ROS
+		float px = joints[JointType_SpineBase].Position.X;
+		float py = joints[JointType_SpineBase].Position.Y;
+		float pz = joints[JointType_SpineBase].Position.Z;
+		float pzGoal = 2.5;
+		const float pzScale = 0.6, pxScale = 0.3;
+		const float vMax = 1.3, vMin = -0.8;
+		const float wMax = 0.6, wMin = -0.6;
+		float cmd[2];
+		// Linear velocity
+		cmd[0] = (pz - pzGoal) * pzScale;
+		cmd[0] = max(min(cmd[0], vMax), vMin);
+		// Angular velocity
+		cmd[1] = px * pxScale;
+		cmd[1] = max(min(cmd[1], wMax), wMin);
+
+		m_pRosPublisher->publish(cmd);
+
+		// Write to a csv file
+		int jointTypeList[] = { JointType_KneeLeft, JointType_AnkleLeft, JointType_FootLeft,
+			JointType_KneeRight, JointType_AnkleRight, JointType_FootRight };
+		*m_pCsvFile << (nTime - m_nStartTime)/10000 << ","; // timestamp in milliseconds
+		for (auto &jt : jointTypeList)
+			*m_pCsvFile << joints[jt].Position.X << ","
+			<< joints[jt].Position.Y << ","
+			<< joints[jt].Position.Z << ",";
+		*m_pCsvFile << "\n";
+	}
 }
 
 /// <summary>

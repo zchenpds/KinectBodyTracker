@@ -80,7 +80,8 @@ private:
     ID2D1SolidColorBrush*   m_pBrushHandLasso;
 
 	// ROS Publisher
-	RosPublisher* m_pRosPublisher;
+	RosPublisher*           m_pRosPublisher;
+	std::ofstream*          m_pCsvFile;
 
     /// <summary>
     /// Main processing function
