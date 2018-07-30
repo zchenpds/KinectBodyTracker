@@ -7,13 +7,13 @@ RosPublisher::RosPublisher(): cmd_vel_pub("cmd_vel", &twist_msg)
 {
 	char ros_master[] = "192.168.1.110:11411";
 
-	printf("Connecting to server at %s\n", ros_master);
+	//printf("Connecting to server at %s\n", ros_master);
 	nh.initNode(ros_master);
 
-	printf("Advertising cmd_vel message\n");
+	//printf("Advertising cmd_vel message\n");
 	nh.advertise(cmd_vel_pub);
 
-	printf("Go robot go!\n");
+	//printf("Go robot go!\n");
 }
 
 
