@@ -160,6 +160,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
         while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
         {
+			if (WM_QUIT == msg.message) break;
             // If a dialog message will be taken care of by the dialog proc
             if (hWndApp && IsDialogMessageW(hWndApp, &msg))
             {
