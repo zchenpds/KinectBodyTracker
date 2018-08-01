@@ -65,7 +65,8 @@ CBodyBasics::CBodyBasics() :
     m_pBrushHandClosed(NULL),
     m_pBrushHandOpen(NULL),
     m_pBrushHandLasso(NULL),
-	m_pRosPublisher(NULL)
+	m_pRosPublisher(NULL),
+	m_nControlStatus(ControlStatus_Stopped)
 {
     LARGE_INTEGER qpf = {0};
     if (QueryPerformanceFrequency(&qpf))
@@ -150,6 +151,22 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
         (DLGPROC)CBodyBasics::MessageRouter, 
         reinterpret_cast<LPARAM>(this));
 
+	RECT rc;
+	GetWindowRect(GetDlgItem(m_hWnd, IDC_VIDEOVIEW), &rc);
+
+	m_hWndButtonFollow = CreateWindow(
+		L"BUTTON",  // Predefined class; Unicode assumed 
+		L"Stop/Follow",      // Button text 
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
+		rc.right + 20,  // x position 
+		20,           // y position 
+		113,          // Button width
+		40,        // Button height
+		hWndApp,    // Parent window
+		NULL,       // No menu.
+		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
+		NULL);      // Pointer not needed.
+
     // Show window
     ShowWindow(hWndApp, nCmdShow);
 
@@ -164,7 +181,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
             // If a dialog message will be taken care of by the dialog proc
             if (hWndApp && IsDialogMessageW(hWndApp, &msg))
             {
-                continue;
+				continue;
             }
 
             TranslateMessage(&msg);
@@ -227,7 +244,7 @@ void CBodyBasics::Update()
 LRESULT CALLBACK CBodyBasics::MessageRouter(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     CBodyBasics* pThis = NULL;
-    
+
     if (WM_INITDIALOG == uMsg)
     {
         pThis = reinterpret_cast<CBodyBasics*>(lParam);
@@ -242,7 +259,7 @@ LRESULT CALLBACK CBodyBasics::MessageRouter(HWND hWnd, UINT uMsg, WPARAM wParam,
     {
         return pThis->DlgProc(hWnd, uMsg, wParam, lParam);
     }
-
+	
     return 0;
 }
 
@@ -274,6 +291,8 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 
 			// Create a ROS publisher
 			m_pRosPublisher = new RosPublisher;
+
+			SetFocus(hWnd);
         }
         break;
 
@@ -286,6 +305,27 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
             // Quit the main message pump
             PostQuitMessage(0);
             break;
+
+		//case WM_KEYDOWN:
+		//case WM_NOTIFY:
+		case WM_COMMAND:
+			switch (wParam)
+			{
+			case BN_CLICKED: //WM_COMMAND
+				HWND hButton = (HWND)lParam;
+				if (hButton == m_hWndButtonFollow)
+				{
+					// Follow/stop button
+					if (m_nControlStatus == ControlStatus_Stopped)
+						m_nControlStatus = ControlStatus_Following;
+					else
+						m_nControlStatus = ControlStatus_Stopped;
+				}
+				break;
+			}
+			break;
+		default:
+			break;
     }
 
     return FALSE;
@@ -440,50 +480,66 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
             }
         }
 
+		WCHAR szControlStatusMessage[14];
+		if (m_nControlStatus == ControlStatus_Stopped)
+			StringCchPrintf(szControlStatusMessage, _countof(szControlStatusMessage), L" %s", L"Stopped");
+		else
+			StringCchPrintf(szControlStatusMessage, _countof(szControlStatusMessage), L" %s", L"Following");
+
         WCHAR szStatusMessage[64];
-        StringCchPrintf(szStatusMessage, _countof(szStatusMessage), L" FPS = %0.2f    Time = %I64d", fps, (nTime - m_nStartTime));
+		StringCchPrintf(szStatusMessage, _countof(szStatusMessage), 
+			L" %-13s FPS = %0.2f    Time = %.0f s", szControlStatusMessage, fps, (nTime - m_nStartTime)/1.0e7);
 
         if (SetStatusMessage(szStatusMessage, 1000, false))
         {
             m_nLastCounter = qpcNow.QuadPart;
             m_nFramesSinceUpdate = 0;
         }
+
+		// Process the closest body, if any.
+		if (iClosest > -1)
+		{
+			Joint joints[JointType_Count];
+			ppBodies[iClosest]->GetJoints(_countof(joints), joints);
+
+			// Publish cmd_vel to ROS
+			float px = joints[JointType_SpineBase].Position.X;
+			float py = joints[JointType_SpineBase].Position.Y;
+			float pz = joints[JointType_SpineBase].Position.Z;
+			float pzGoal = 2.5;
+			const float pzScale = 0.6, pxScale = 0.3;
+			const float vMax = 1.3, vMin = -0.8;
+			const float wMax = 0.6, wMin = -0.6;
+			float cmd[2];
+			// Linear velocity
+			cmd[0] = (pz - pzGoal) * pzScale;
+			cmd[0] = max(min(cmd[0], vMax), vMin);
+			// Angular velocity
+			cmd[1] = px * pxScale;
+			cmd[1] = max(min(cmd[1], wMax), wMin);
+
+
+			if (m_nControlStatus == ControlStatus_Following)
+			{
+				m_pRosPublisher->publish(cmd);
+			}
+
+
+
+
+			// Write to a csv file
+			int jointTypeList[] = { JointType_KneeLeft, JointType_AnkleLeft, JointType_FootLeft,
+				JointType_KneeRight, JointType_AnkleRight, JointType_FootRight };
+			*m_pCsvFile << (nTime - m_nStartTime) / 10000 << ","; // timestamp in milliseconds
+			for (auto &jt : jointTypeList)
+				*m_pCsvFile << joints[jt].Position.X << ","
+				<< joints[jt].Position.Y << ","
+				<< joints[jt].Position.Z << ",";
+			*m_pCsvFile << "\n";
+		}
     }
 
-	// Process the closest body, if any.
-	if (iClosest > -1)
-	{
-		Joint joints[JointType_Count];
-		ppBodies[iClosest]->GetJoints(_countof(joints), joints);
-
-		// Publish cmd_vel to ROS
-		float px = joints[JointType_SpineBase].Position.X;
-		float py = joints[JointType_SpineBase].Position.Y;
-		float pz = joints[JointType_SpineBase].Position.Z;
-		float pzGoal = 2.5;
-		const float pzScale = 0.6, pxScale = 0.3;
-		const float vMax = 1.3, vMin = -0.8;
-		const float wMax = 0.6, wMin = -0.6;
-		float cmd[2];
-		// Linear velocity
-		cmd[0] = (pz - pzGoal) * pzScale;
-		cmd[0] = max(min(cmd[0], vMax), vMin);
-		// Angular velocity
-		cmd[1] = px * pxScale;
-		cmd[1] = max(min(cmd[1], wMax), wMin);
-
-		m_pRosPublisher->publish(cmd);
-
-		// Write to a csv file
-		int jointTypeList[] = { JointType_KneeLeft, JointType_AnkleLeft, JointType_FootLeft,
-			JointType_KneeRight, JointType_AnkleRight, JointType_FootRight };
-		*m_pCsvFile << (nTime - m_nStartTime)/10000 << ","; // timestamp in milliseconds
-		for (auto &jt : jointTypeList)
-			*m_pCsvFile << joints[jt].Position.X << ","
-			<< joints[jt].Position.Y << ","
-			<< joints[jt].Position.Z << ",";
-		*m_pCsvFile << "\n";
-	}
+	
 }
 
 /// <summary>

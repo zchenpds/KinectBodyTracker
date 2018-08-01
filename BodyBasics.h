@@ -8,6 +8,15 @@
 
 #include "resource.h"
 
+typedef enum _ControlStatus ControlStatus;
+enum _ControlStatus
+{
+	ControlStatus_Stopped = 0,
+	ControlStatus_Following = 1
+};
+
+
+
 class CBodyBasics
 {
     static const int        cDepthWidth  = 512;
@@ -80,8 +89,10 @@ private:
     ID2D1SolidColorBrush*   m_pBrushHandLasso;
 
 	// ROS Publisher
+	HWND                    m_hWndButtonFollow;
 	RosPublisher*           m_pRosPublisher;
 	std::ofstream*          m_pCsvFile;
+	ControlStatus           m_nControlStatus;
 
     /// <summary>
     /// Main processing function
