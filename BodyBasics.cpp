@@ -497,6 +497,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
         }
 
 		// Process the closest body, if any.
+		float cmd[2];
 		if (iClosest > -1)
 		{
 			Joint joints[JointType_Count];
@@ -510,7 +511,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			const float pzScale = 0.6, pxScale = 0.3;
 			const float vMax = 1.3, vMin = -0.8;
 			const float wMax = 0.6, wMin = -0.6;
-			float cmd[2];
+			
 			// Linear velocity
 			cmd[0] = (pz - pzGoal) * pzScale;
 			cmd[0] = max(min(cmd[0], vMax), vMin);
@@ -519,12 +520,11 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			cmd[1] = max(min(cmd[1], wMax), wMin);
 
 
-			if (m_nControlStatus == ControlStatus_Following)
+			if (m_nControlStatus == ControlStatus_Stopped)
 			{
-				m_pRosPublisher->publish(cmd);
+				cmd[0] = 0.0;
+				cmd[1] = 0.0;
 			}
-
-
 
 
 			// Write to a csv file
@@ -537,6 +537,13 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				<< joints[jt].Position.Z << ",";
 			*m_pCsvFile << "\n";
 		}
+		else
+		{
+			cmd[0] = 0.0;
+			cmd[1] = 0.0;
+		}
+
+		m_pRosPublisher->publish(cmd);
     }
 
 	
