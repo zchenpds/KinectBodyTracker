@@ -25,6 +25,7 @@
     <ClCompile Include="rosserial_windows\ros_lib\duration.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\time.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\WindowsSocket.cpp" />
+    <ClCompile Include="SyncSocket.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="app.ico" />
@@ -40,6 +41,7 @@
     <ClInclude Include="rosserial_windows\ros_lib\ros.h" />
     <ClInclude Include="rosserial_windows\ros_lib\WindowsSocket.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SyncSocket.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6E5E35A2-7A3B-4671-AD85-B39DC5D710C9}</ProjectGuid>
