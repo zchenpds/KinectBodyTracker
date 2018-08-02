@@ -1,14 +1,25 @@
 #include "stdafx.h"
 #include "RosPublisher.h"
+#include <string>
 
 
-
-RosPublisher::RosPublisher(): cmd_vel_pub("cmd_vel", &twist_msg)
+RosPublisher::RosPublisher(): 
+	cmd_vel_pub("cmd_vel", &twist_msg),
+	m_pConfig(NULL),
+	m_pszRosMaster(NULL)
 {
-	char ros_master[] = "192.168.1.110:11411";
-
+	std::string strRosMaster("192.168.1.152:11411");
+	m_pConfig = new Config();
+	if (m_pConfig)
+	{
+		m_pConfig->assign("ros_master", strRosMaster);
+		m_pszRosMaster = new char[strRosMaster.length() + 1];
+		std::strcpy(m_pszRosMaster, strRosMaster.c_str());
+	}
+	
+	
 	//printf("Connecting to server at %s\n", ros_master);
-	nh.initNode(ros_master);
+	nh.initNode(m_pszRosMaster);
 
 	//printf("Advertising cmd_vel message\n");
 	nh.advertise(cmd_vel_pub);
@@ -19,6 +30,8 @@ RosPublisher::RosPublisher(): cmd_vel_pub("cmd_vel", &twist_msg)
 
 RosPublisher::~RosPublisher()
 {
+	delete m_pConfig;
+	delete[] m_pszRosMaster;
 }
 
 

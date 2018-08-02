@@ -7,14 +7,15 @@
 #include "stdafx.h"
 #include <strsafe.h>
 #include "resource.h"
-#include "RosPublisher.h"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <ctime>
 #include <string>
 #include <Windows.h>
+#include "RosPublisher.h"
 #include "BodyBasics.h"
+#include "Config.h"
 
 static const float c_JointThickness = 3.0f;
 static const float c_TrackedBoneThickness = 6.0f;
@@ -66,7 +67,8 @@ CBodyBasics::CBodyBasics() :
     m_pBrushHandOpen(NULL),
     m_pBrushHandLasso(NULL),
 	m_pRosPublisher(NULL),
-	m_nControlStatus(ControlStatus_Stopped)
+	m_nControlStatus(ControlStatus_Stopped),
+	m_pConfig(NULL)
 {
     LARGE_INTEGER qpf = {0};
     if (QueryPerformanceFrequency(&qpf))
@@ -88,6 +90,7 @@ CBodyBasics::CBodyBasics() :
 		<< std::setw(2) << timeinfo->tm_sec << ".csv";
 	m_pCsvFile = new std::ofstream(ssFileName.str(), std::ofstream::out); // Open the csv file
 	//*m_pCsvFile << "123" << std::endl; // Test write
+	m_pConfig = new Config();
 }
   
 
@@ -96,6 +99,7 @@ CBodyBasics::CBodyBasics() :
 /// </summary>
 CBodyBasics::~CBodyBasics()
 {
+	delete m_pConfig;
 	delete m_pRosPublisher;
 	m_pCsvFile->close();
 	delete m_pCsvFile;

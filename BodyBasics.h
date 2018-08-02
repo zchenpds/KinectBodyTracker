@@ -7,6 +7,8 @@
 #pragma once
 
 #include "resource.h"
+#include "SyncSocket.h"
+#include "Config.h"
 
 typedef enum _ControlStatus ControlStatus;
 enum _ControlStatus
@@ -93,7 +95,7 @@ private:
 	RosPublisher*           m_pRosPublisher;
 	std::ofstream*          m_pCsvFile;
 	ControlStatus           m_nControlStatus;
-
+	Config*                 m_pConfig;
     /// <summary>
     /// Main processing function
     /// </summary>

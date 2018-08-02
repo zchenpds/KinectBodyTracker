@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BodyBasics.cpp" />
+    <ClCompile Include="Config.cpp" />
     <ClCompile Include="RosPublisher.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\duration.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\time.cpp" />
@@ -33,6 +34,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BodyBasics.h" />
+    <ClInclude Include="Config.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="RosPublisher.h" />
     <ClInclude Include="rosserial_windows\ros_lib\ros.h" />
