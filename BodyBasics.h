@@ -9,6 +9,7 @@
 #include "resource.h"
 #include "SyncSocket.h"
 #include "Config.h"
+#include "SyncSocket.h"
 
 typedef enum _ControlStatus ControlStatus;
 enum _ControlStatus
@@ -90,8 +91,12 @@ private:
     ID2D1SolidColorBrush*   m_pBrushHandOpen;
     ID2D1SolidColorBrush*   m_pBrushHandLasso;
 
+	//
+	SyncSocket*             m_pSyncSocket;
+
 	// ROS Publisher
 	HWND                    m_hWndButtonFollow;
+	HWND                    m_hWndButtonLoad;
 	RosPublisher*           m_pRosPublisher;
 	std::ofstream*          m_pCsvFile;
 	ControlStatus           m_nControlStatus;

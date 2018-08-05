@@ -99,6 +99,8 @@ CBodyBasics::CBodyBasics() :
 	m_pCsvFile = new std::ofstream(ssFileName.str(), std::ofstream::out); // Open the csv file
 	//*m_pCsvFile << "123" << std::endl; // Test write
 	m_pConfig = new Config();
+	m_pSyncSocket = new SyncSocket();
+	m_pSyncSocket->init();
 }
   
 
@@ -107,6 +109,7 @@ CBodyBasics::CBodyBasics() :
 /// </summary>
 CBodyBasics::~CBodyBasics()
 {
+	delete m_pSyncSocket;
 	delete m_pConfig;
 	delete m_pRosPublisher;
 	m_pCsvFile->close();
@@ -198,7 +201,15 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
     // Main message loop
     while (WM_QUIT != msg.message)
     {
+		INT64 t1 = GetTickCount64();
+		// Odroid Timestamp
+		OdroidTimestamp ts = m_pSyncSocket->receive(t1);
+
         Update();
+		//INT64 t2 = GetTickCount64();
+		//WCHAR szStatusMessage[64];
+		//StringCchPrintf(szStatusMessage, _countof(szStatusMessage), L"%d ms", t2 - t1);
+		//SetStatusMessage(szStatusMessage, 500, true);
 
         while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
         {
@@ -426,6 +437,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 {
 	int iClosest = -1; // the index of the body closest to the camera
 	float dSqrMin = 10.0; // squared x-z-distance of the closest body
+	INT64 t0Windows = GetTickCount64();
 
     if (m_hWnd)
     {
@@ -559,11 +571,12 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				cmd[1] = 0.0;
 			}
 
-
 			// Write to a csv file
 			int jointTypeList[] = { JointType_KneeLeft, JointType_AnkleLeft, JointType_FootLeft,
 				JointType_KneeRight, JointType_AnkleRight, JointType_FootRight };
-			*m_pCsvFile << (nTime - m_nStartTime) / 10000 << ","; // timestamp in milliseconds
+			*m_pCsvFile << (nTime - m_nStartTime) / 10000 << ","; // Kinect timestamp in mSecs
+			*m_pCsvFile << m_pSyncSocket->m_tsOdroid << ","; // Odroid timestamp in mSecs
+			*m_pCsvFile << t0Windows - m_pSyncSocket->m_tsWindows << ","; // How many mSecs ago was Odroid timestamp received
 			for (auto &jt : jointTypeList)
 				*m_pCsvFile << joints[jt].Position.X << ","
 				<< joints[jt].Position.Y << ","
