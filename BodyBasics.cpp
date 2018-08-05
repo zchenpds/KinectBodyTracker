@@ -68,7 +68,15 @@ CBodyBasics::CBodyBasics() :
     m_pBrushHandLasso(NULL),
 	m_pRosPublisher(NULL),
 	m_nControlStatus(ControlStatus_Stopped),
-	m_pConfig(NULL)
+	m_pConfig(NULL),
+	// control parameters
+	pzGoal(2.5),
+	pzScale(0.6), 
+	pxScale(0.3),
+	vMax(1.3),
+	vMin(-0.8),
+	wMax(0.6), 
+	wMin(-0.6)
 {
     LARGE_INTEGER qpf = {0};
     if (QueryPerformanceFrequency(&qpf))
@@ -164,6 +172,19 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
 		rc.right + 20,  // x position 
 		20,           // y position 
+		113,          // Button width
+		40,        // Button height
+		hWndApp,    // Parent window
+		NULL,       // No menu.
+		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
+		NULL);      // Pointer not needed.
+
+	m_hWndButtonLoad = CreateWindow(
+		L"BUTTON",  // Predefined class; Unicode assumed 
+		L"Load",      // Button text 
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
+		rc.right + 20,  // x position 
+		80,           // y position 
 		113,          // Button width
 		40,        // Button height
 		hWndApp,    // Parent window
@@ -317,13 +338,25 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			{
 			case BN_CLICKED: //WM_COMMAND
 				HWND hButton = (HWND)lParam;
-				if (hButton == m_hWndButtonFollow)
+				if (m_hWndButtonFollow == hButton)
 				{
 					// Follow/stop button
 					if (m_nControlStatus == ControlStatus_Stopped)
 						m_nControlStatus = ControlStatus_Following;
 					else
 						m_nControlStatus = ControlStatus_Stopped;
+				}
+				else if (m_hWndButtonLoad == hButton)
+				{
+					// Load button
+					m_pConfig->load();
+					m_pConfig->assign("pzGoal", pzGoal);
+					m_pConfig->assign("pzScale", pzScale);
+					m_pConfig->assign("pxScale", pxScale);
+					m_pConfig->assign("vMax", vMax);
+					m_pConfig->assign("vMin", vMin);
+					m_pConfig->assign("wMax", wMax);
+					m_pConfig->assign("wMin", wMin);
 				}
 				break;
 			}
@@ -511,10 +544,6 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			float px = joints[JointType_SpineBase].Position.X;
 			float py = joints[JointType_SpineBase].Position.Y;
 			float pz = joints[JointType_SpineBase].Position.Z;
-			float pzGoal = 2.5;
-			const float pzScale = 0.6, pxScale = 0.3;
-			const float vMax = 1.3, vMin = -0.8;
-			const float wMax = 0.6, wMin = -0.6;
 			
 			// Linear velocity
 			cmd[0] = (pz - pzGoal) * pzScale;

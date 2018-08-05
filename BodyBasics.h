@@ -96,6 +96,12 @@ private:
 	std::ofstream*          m_pCsvFile;
 	ControlStatus           m_nControlStatus;
 	Config*                 m_pConfig;
+
+	// Control parameters
+	float                   pzGoal, 
+		                    pzScale, pxScale, 
+		                    vMax, vMin, wMax, wMin;
+
     /// <summary>
     /// Main processing function
     /// </summary>
