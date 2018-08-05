@@ -576,7 +576,15 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				JointType_KneeRight, JointType_AnkleRight, JointType_FootRight };
 			*m_pCsvFile << (nTime - m_nStartTime) / 10000 << ","; // Kinect timestamp in mSecs
 			*m_pCsvFile << m_pSyncSocket->m_tsOdroid << ","; // Odroid timestamp in mSecs
-			*m_pCsvFile << t0Windows - m_pSyncSocket->m_tsWindows << ","; // How many mSecs ago was Odroid timestamp received
+			if (m_pSyncSocket->m_tsWindows < 0)
+				*m_pCsvFile << -1 << ","; // No sync packet has been received
+			else
+			{
+				// How many mSecs ago was the last Odroid timestamp received
+				INT64 tsDiff = t0Windows - m_pSyncSocket->m_tsWindows; 
+			}
+				
+			
 			for (auto &jt : jointTypeList)
 				*m_pCsvFile << joints[jt].Position.X << ","
 				<< joints[jt].Position.Y << ","

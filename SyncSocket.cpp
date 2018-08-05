@@ -6,7 +6,9 @@ SyncSocket::SyncSocket() :
 	m_socketListen(INVALID_SOCKET),
 	m_nPacketCount(0),
 	m_nErrorCount(0),
-	m_bWs2Loaded(false)
+	m_bWs2Loaded(false),
+	m_tsWindows(-1),
+	m_tsOdroid(-1)
 {
 }
 
