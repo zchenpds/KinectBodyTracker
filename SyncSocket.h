@@ -1,10 +1,16 @@
 #pragma once
+
+#ifndef UNICODE
+#define UNICODE
+#endif
+#define WIN32_LEAN_AND_MEAN
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <cstdint>
 
-#define SYNC_SOCKET_PORT     3464
-#define PACKET_LENGTH_TIME   16
+const unsigned int SYNC_SOCKET_PORT = 3464;
+const unsigned int PACKET_LENGTH_TIME = 16;
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -25,7 +31,6 @@ private:
 	int                m_nPacketCount;
 	int                m_nErrorCount;
 	bool               m_bWs2Loaded; // indicates whether WSACleanup() is needed on exit
-	char               m_pBuffer[PACKET_LENGTH_TIME];
 public:
 	INT64              m_tsWindows;
 	OdroidTimestamp    m_tsOdroid;

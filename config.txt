@@ -1,4 +1,4 @@
-ros_master=192.168.1.153:11411
+ros_master=192.168.1.15:11411
 
 pzGoal=2.5
 
@@ -6,7 +6,7 @@ pzScale=0.6
 pxScale = 0.3
 
 vMax=1.3
-vMin=-1.0
+vMin=-0.8
 
 wMax=0.6
 wMin=-0.6

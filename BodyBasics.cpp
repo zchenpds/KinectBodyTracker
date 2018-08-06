@@ -439,6 +439,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 	float dSqrMin = 10.0; // squared x-z-distance of the closest body
 	INT64 t0Windows = GetTickCount64();
 
+
     if (m_hWnd)
     {
         HRESULT hr = EnsureDirect2DResources();
@@ -582,6 +583,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			{
 				// How many mSecs ago was the last Odroid timestamp received
 				INT64 tsDiff = t0Windows - m_pSyncSocket->m_tsWindows; 
+				*m_pCsvFile << tsDiff << ",";
 			}
 				
 			

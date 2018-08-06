@@ -48,7 +48,8 @@ bool SyncSocket::init()
 	// socket based on the numerical value of iMode.
 	// If iMode = 0, blocking is enabled;
 	// If iMode != 0, non-blocking mode is enabled.
-	u_long iMode = 0;
+	
+	u_long iMode = 1;
 	iResult = ioctlsocket(m_socketListen, FIONBIO, &iMode);
 	if (iResult != NO_ERROR)
 	{
@@ -79,18 +80,24 @@ OdroidTimestamp SyncSocket::receive(INT64 tsWindows, SportSolePacket * pPacket)
 {
 	int ret;
 
-	sockaddr * addrSource;
-	int lenAddrSource;
+	sockaddr addrSource;
+	int lenAddrSource = sizeof(addrSource);
 	SportSolePacket packet;
+	char pBuffer[PACKET_LENGTH_TIME];
 
-	ret = recvfrom(m_socketListen, m_pBuffer, PACKET_LENGTH_TIME, 0, addrSource, &lenAddrSource);
+	ZeroMemory(&addrSource, sizeof(addrSource));
+	int error_code1 = WSAGetLastError();
+	ret = recvfrom(m_socketListen, pBuffer, PACKET_LENGTH_TIME, 0, &addrSource, &lenAddrSource);
+	//ret = recvfrom(m_socketListen, pBuffer, PACKET_LENGTH_TIME, 0, NULL, NULL);
+	int error_code2 = WSAGetLastError();
+	
 
-	if (ret>1)
+	if (ret>=1)
 	{
 		m_nPacketCount++;
-		if (checkSportSolePacket((uint8_t *)m_pBuffer))
+		if (checkSportSolePacket((uint8_t *)pBuffer))
 		{
-			reconstructStructSportSolePacket((uint8_t *)m_pBuffer, packet);
+			reconstructStructSportSolePacket((uint8_t *)pBuffer, packet);
 			if (pPacket != NULL)
 				memcpy(pPacket, &packet, sizeof(SportSolePacket));
 			OdroidTimestamp * pOts = (OdroidTimestamp *)packet.Odroid_Timestamp; // assuming big-endian
@@ -110,7 +117,8 @@ OdroidTimestamp SyncSocket::receive(INT64 tsWindows, SportSolePacket * pPacket)
 
 bool SyncSocket::checkSportSolePacket(uint8_t * buffer)
 {
-	return (buffer[0] == 0x01 && buffer[1] == 0x02 && buffer[2] == 0x03 && buffer[PACKET_LENGTH_TIME - 3] == 0x4 && buffer[PACKET_LENGTH_TIME - 2] == 0x5 && buffer[PACKET_LENGTH_TIME - 1] == 0x6) && (buffer[3] == 0x02);
+	return (buffer[0] == 0x01 && buffer[1] == 0x02 && buffer[2] == 0x03 && 
+		buffer[13] == 0x4 && buffer[14] == 0x5 && buffer[15] == 0x6) && (buffer[3] == 0x02);
 }
 
 void SyncSocket::reconstructStructSportSolePacket(uint8_t * recvbuffer, SportSolePacket & dataPacket)
