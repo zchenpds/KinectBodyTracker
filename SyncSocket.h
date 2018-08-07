@@ -38,7 +38,7 @@ public:
 public:
 	SyncSocket();
 	~SyncSocket();
-	bool init();
+	bool init(WCHAR *pszText);
 	OdroidTimestamp receive(INT64 tsWindows, SportSolePacket * pPacket = NULL);
 protected:
 	bool checkSportSolePacket(uint8_t * buffer);

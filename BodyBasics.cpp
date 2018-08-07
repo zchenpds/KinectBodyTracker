@@ -100,7 +100,7 @@ CBodyBasics::CBodyBasics() :
 	//*m_pCsvFile << "123" << std::endl; // Test write
 	m_pConfig = new Config();
 	m_pSyncSocket = new SyncSocket();
-	m_pSyncSocket->init();
+	
 }
   
 
@@ -197,6 +197,13 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
     // Show window
     ShowWindow(hWndApp, nCmdShow);
+
+	WCHAR pszText[128];
+	if (!m_pSyncSocket->init(pszText))
+	{
+		MessageBox(hWndApp, pszText, NULL, MB_OK | MB_ICONERROR);
+		DestroyWindow(hWndApp);
+	}
 
     // Main message loop
     while (WM_QUIT != msg.message)

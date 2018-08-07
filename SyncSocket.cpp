@@ -1,5 +1,5 @@
 #include "SyncSocket.h"
-
+#include <strsafe.h>
 
 
 SyncSocket::SyncSocket() :
@@ -19,7 +19,7 @@ SyncSocket::~SyncSocket()
 	releaseResource();
 }
 
-bool SyncSocket::init()
+bool SyncSocket::init(WCHAR *pszText)
 {
 	int iResult;
 	WSADATA wsaData;
@@ -28,6 +28,7 @@ bool SyncSocket::init()
 	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != 0)
 	{
+		StringCchPrintf(pszText, sizeof(pszText), L"WSAStartup failed with error %d", iResult);
 		m_bWs2Loaded = false;
 		return false;
 	}
@@ -39,6 +40,7 @@ bool SyncSocket::init()
 	m_socketListen = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (INVALID_SOCKET == m_socketListen)
 	{
+		StringCchPrintf(pszText, sizeof(pszText), L"socket failed with error %d\n", iResult);
 		releaseResource();
 		return false;
 	}
@@ -53,6 +55,7 @@ bool SyncSocket::init()
 	iResult = ioctlsocket(m_socketListen, FIONBIO, &iMode);
 	if (iResult != NO_ERROR)
 	{
+		StringCchPrintf(pszText, sizeof(pszText), L"ioctlsocket failed with error %d\n", WSAGetLastError());
 		releaseResource();
 		return false;
 	}
@@ -68,11 +71,12 @@ bool SyncSocket::init()
 
 	iResult = bind(m_socketListen, (const sockaddr *)&addrListen, sizeof(addrListen));
 	if (iResult != 0) {
+		StringCchPrintf(pszText, sizeof(pszText), L"bind failed with error %d\n", WSAGetLastError());
 		releaseResource();
 		return false;
 	}
 
-
+	StringCchPrintf(pszText, sizeof(pszText), L"OK!");
 	return true;
 }
 
@@ -112,7 +116,7 @@ OdroidTimestamp SyncSocket::receive(INT64 tsWindows, SportSolePacket * pPacket)
 
 	}
 
-	return (OdroidTimestamp)0; // the socket received nothing or some error occurred.
+	return (OdroidTimestamp)(-1); // the socket received nothing or some error occurred.
 }
 
 bool SyncSocket::checkSportSolePacket(uint8_t * buffer)
