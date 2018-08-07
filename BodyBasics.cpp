@@ -111,7 +111,7 @@ CBodyBasics::~CBodyBasics()
 {
 	delete m_pSyncSocket;
 	delete m_pConfig;
-	delete m_pRosPublisher;
+	//delete m_pRosPublisher;
 	m_pCsvFile->close();
 	delete m_pCsvFile;
     DiscardDirect2DResources();
@@ -326,7 +326,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
             InitializeDefaultSensor();
 
 			// Create a ROS publisher
-			m_pRosPublisher = new RosPublisher;
+			//m_pRosPublisher = new RosPublisher;
 
 			SetFocus(hWnd);
         }
@@ -599,7 +599,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			cmd[1] = 0.0;
 		}
 
-		m_pRosPublisher->publish(cmd);
+		//m_pRosPublisher->publish(cmd);
     }
 
 	
