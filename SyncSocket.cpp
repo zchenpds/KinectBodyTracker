@@ -7,6 +7,7 @@ SyncSocket::SyncSocket() :
 	m_nPacketCount(0),
 	m_nErrorCount(0),
 	m_bWs2Loaded(false),
+	m_bInitSucceeded(false),
 	m_tsWindows(-1),
 	m_tsOdroid(-1)
 {
@@ -75,13 +76,15 @@ bool SyncSocket::init(WCHAR *pszText, int len)
 		releaseResource();
 		return false;
 	}
-
+	m_bInitSucceeded = true;
 	StringCchPrintf(pszText, len, L"OK!");
 	return true;
 }
 
 OdroidTimestamp SyncSocket::receive(INT64 tsWindows, SportSolePacket * pPacket)
 {
+	if (!m_bInitSucceeded) 
+		return (OdroidTimestamp)(-1);
 	int ret;
 
 	sockaddr addrSource;

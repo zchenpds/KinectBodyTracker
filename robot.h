@@ -18,6 +18,7 @@ private:
 	ArRobot*                    m_pArRobot;
 	ArRobotConnector*           m_pRobotConn;
 	RobotState                  m_State;
+	bool                        m_bInitSucceeded;
 public:
 public:
 	Robot();

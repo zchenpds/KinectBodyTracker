@@ -208,7 +208,8 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
     {
 		INT64 t1 = GetTickCount64();
 		// Odroid Timestamp
-		OdroidTimestamp ts = m_pSyncSocket->receive(t1);
+		if (m_pSyncSocket)
+			m_pSyncSocket->receive(t1);
 
         Update();
 		//INT64 t2 = GetTickCount64();
@@ -338,10 +339,13 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			WCHAR pszText[ERROR_MESSAGE_LENGTH];
 			if (!m_pSyncSocket->init(pszText, ERROR_MESSAGE_LENGTH))
 			{
-				MessageBox(hWnd, pszText, NULL, MB_OK | MB_ICONERROR);
-				DestroyWindow(hWnd);
+				StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, L"%s Continue anyway?", pszText);
+				int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
+				if (msgboxID == IDNO)
+					DestroyWindow(hWnd);
+				else
 			}
-			else if (!m_pRobot->init(pszText, ERROR_MESSAGE_LENGTH))
+			if (!m_pRobot->init(pszText, ERROR_MESSAGE_LENGTH))
 			{
 				StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, L"%s Continue anyway?", pszText);
 				int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);

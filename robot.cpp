@@ -2,10 +2,12 @@
 #include <strsafe.h>
 
 
-Robot::Robot():
+Robot::Robot() :
 	m_pArRobot(NULL),
-	m_pRobotConn(NULL)
+	m_pRobotConn(NULL),
+	m_bInitSucceeded(false)
 {
+	ZeroMemory(&m_State, sizeof(m_State));
 }
 
 
@@ -81,6 +83,7 @@ bool Robot::init(WCHAR *pszText, int len)
 
 	m_pArRobot->enableMotors();
 
+	m_bInitSucceeded = true;
 	return true; // init is successful
 }
 
@@ -104,6 +107,8 @@ pcRobotState Robot::getState()
 
 void Robot::setCmd(float v, float w)
 {
+	if (!m_bInitSucceeded) return;
+
 	m_pArRobot->lock();
 	m_pArRobot->setVel(v * 1e3);
 	m_pArRobot->setRotVel(w * 180 / M_PI);
