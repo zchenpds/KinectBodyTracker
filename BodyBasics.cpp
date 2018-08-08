@@ -343,7 +343,6 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
 				if (msgboxID == IDNO)
 					DestroyWindow(hWnd);
-				else
 			}
 			if (!m_pRobot->init(pszText, ERROR_MESSAGE_LENGTH))
 			{
