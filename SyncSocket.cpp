@@ -19,7 +19,7 @@ SyncSocket::~SyncSocket()
 	releaseResource();
 }
 
-bool SyncSocket::init(WCHAR *pszText)
+bool SyncSocket::init(WCHAR *pszText, int len)
 {
 	int iResult;
 	WSADATA wsaData;
@@ -28,7 +28,7 @@ bool SyncSocket::init(WCHAR *pszText)
 	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != 0)
 	{
-		StringCchPrintf(pszText, sizeof(pszText), L"WSAStartup failed with error %d", iResult);
+		StringCchPrintf(pszText, len, L"WSAStartup failed with error %d", iResult);
 		m_bWs2Loaded = false;
 		return false;
 	}
@@ -40,7 +40,7 @@ bool SyncSocket::init(WCHAR *pszText)
 	m_socketListen = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (INVALID_SOCKET == m_socketListen)
 	{
-		StringCchPrintf(pszText, sizeof(pszText), L"socket failed with error %d\n", iResult);
+		StringCchPrintf(pszText, len, L"socket failed with error %d\n", iResult);
 		releaseResource();
 		return false;
 	}
@@ -55,7 +55,7 @@ bool SyncSocket::init(WCHAR *pszText)
 	iResult = ioctlsocket(m_socketListen, FIONBIO, &iMode);
 	if (iResult != NO_ERROR)
 	{
-		StringCchPrintf(pszText, sizeof(pszText), L"ioctlsocket failed with error %d\n", WSAGetLastError());
+		StringCchPrintf(pszText, len, L"ioctlsocket failed with error %d\n", WSAGetLastError());
 		releaseResource();
 		return false;
 	}
@@ -71,12 +71,12 @@ bool SyncSocket::init(WCHAR *pszText)
 
 	iResult = bind(m_socketListen, (const sockaddr *)&addrListen, sizeof(addrListen));
 	if (iResult != 0) {
-		StringCchPrintf(pszText, sizeof(pszText), L"bind failed with error %d\n", WSAGetLastError());
+		StringCchPrintf(pszText, len, L"bind failed with error %d\n", WSAGetLastError());
 		releaseResource();
 		return false;
 	}
 
-	StringCchPrintf(pszText, sizeof(pszText), L"OK!");
+	StringCchPrintf(pszText, len, L"OK!");
 	return true;
 }
 

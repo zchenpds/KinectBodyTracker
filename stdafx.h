@@ -28,6 +28,7 @@
 #include "ros.h"
 #include <geometry_msgs/Twist.h>
 
+#include "Aria.h"
 
 #pragma comment (lib, "d2d1.lib")
 

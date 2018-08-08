@@ -13,9 +13,10 @@
 #include <ctime>
 #include <string>
 #include <Windows.h>
-#include "RosPublisher.h"
+#include "RosPublisher.h" // Deprecated
 #include "BodyBasics.h"
 #include "Config.h"
+#include "robot.h"
 
 static const float c_JointThickness = 3.0f;
 static const float c_TrackedBoneThickness = 6.0f;
@@ -69,6 +70,8 @@ CBodyBasics::CBodyBasics() :
 	m_pRosPublisher(NULL),
 	m_nControlStatus(ControlStatus_Stopped),
 	m_pConfig(NULL),
+	m_pRobot(NULL),
+	m_pSyncSocket(NULL),
 	// control parameters
 	pzGoal(2.5),
 	pzScale(0.6), 
@@ -100,6 +103,7 @@ CBodyBasics::CBodyBasics() :
 	//*m_pCsvFile << "123" << std::endl; // Test write
 	m_pConfig = new Config();
 	m_pSyncSocket = new SyncSocket();
+	m_pRobot = new Robot();
 	
 }
   
@@ -109,6 +113,7 @@ CBodyBasics::CBodyBasics() :
 /// </summary>
 CBodyBasics::~CBodyBasics()
 {
+	delete m_pRobot;
 	delete m_pSyncSocket;
 	delete m_pConfig;
 	//delete m_pRosPublisher;
@@ -197,14 +202,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
     // Show window
     ShowWindow(hWndApp, nCmdShow);
-
-	WCHAR pszText[128];
-	if (!m_pSyncSocket->init(pszText))
-	{
-		MessageBox(hWndApp, pszText, NULL, MB_OK | MB_ICONERROR);
-		DestroyWindow(hWndApp);
-	}
-
+	
     // Main message loop
     while (WM_QUIT != msg.message)
     {
@@ -334,6 +332,22 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 
 			// Create a ROS publisher
 			//m_pRosPublisher = new RosPublisher;
+
+			//
+			const int ERROR_MESSAGE_LENGTH = 128;
+			WCHAR pszText[ERROR_MESSAGE_LENGTH];
+			if (!m_pSyncSocket->init(pszText, ERROR_MESSAGE_LENGTH))
+			{
+				MessageBox(hWnd, pszText, NULL, MB_OK | MB_ICONERROR);
+				DestroyWindow(hWnd);
+			}
+			else if (!m_pRobot->init(pszText, ERROR_MESSAGE_LENGTH))
+			{
+				StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, L"%s Continue anyway?", pszText);
+				int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
+				if (msgboxID == IDNO)
+					DestroyWindow(hWnd);
+			}
 
 			SetFocus(hWnd);
         }
@@ -537,21 +551,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
             }
         }
 
-		WCHAR szControlStatusMessage[14];
-		if (m_nControlStatus == ControlStatus_Stopped)
-			StringCchPrintf(szControlStatusMessage, _countof(szControlStatusMessage), L" %s", L"Stopped");
-		else
-			StringCchPrintf(szControlStatusMessage, _countof(szControlStatusMessage), L" %s", L"Following");
-
-        WCHAR szStatusMessage[64];
-		StringCchPrintf(szStatusMessage, _countof(szStatusMessage), 
-			L" %-13s FPS = %0.2f    Time = %.0f s", szControlStatusMessage, fps, (nTime - m_nStartTime)/1.0e7);
-
-        if (SetStatusMessage(szStatusMessage, 1000, false))
-        {
-            m_nLastCounter = qpcNow.QuadPart;
-            m_nFramesSinceUpdate = 0;
-        }
+		
 
 		// Process the closest body, if any.
 		float cmd[2];
@@ -579,7 +579,9 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				cmd[1] = 0.0;
 			}
 
-			// Write to a csv file
+			m_pRobot->setCmd(cmd[0], cmd[1]);
+
+			// Write time info to a csv file
 			int jointTypeList[] = { JointType_KneeLeft, JointType_AnkleLeft, JointType_FootLeft,
 				JointType_KneeRight, JointType_AnkleRight, JointType_FootRight };
 			*m_pCsvFile << (nTime - m_nStartTime) / 10000 << ","; // Kinect timestamp in mSecs
@@ -592,21 +594,47 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				INT64 tsDiff = t0Windows - m_pSyncSocket->m_tsWindows; 
 				*m_pCsvFile << tsDiff << ",";
 			}
-				
 			
+			// Write joint states to a csv file
 			for (auto &jt : jointTypeList)
 				*m_pCsvFile << joints[jt].Position.X << ","
 				<< joints[jt].Position.Y << ","
 				<< joints[jt].Position.Z << ",";
+			
+			// Write robot states to a csv file
+			m_pRobot->updateState();
+			float * pState = (float *)m_pRobot->getState();
+			for (int i = 0; i < 5; i++)
+				*m_pCsvFile << pState[i] << ",";
 			*m_pCsvFile << "\n";
 		}
 		else
 		{
 			cmd[0] = 0.0;
 			cmd[1] = 0.0;
+			m_pRobot->setCmd(cmd[0], cmd[1]);
 		}
 
 		//m_pRosPublisher->publish(cmd);
+
+		WCHAR szControlStatusMessage[14];
+		if (m_nControlStatus == ControlStatus_Stopped)
+			StringCchPrintf(szControlStatusMessage, _countof(szControlStatusMessage), L" %s", L"Stopped");
+		else
+			StringCchPrintf(szControlStatusMessage, _countof(szControlStatusMessage), L" %s", L"Following");
+
+		WCHAR szStatusMessage[64];
+		StringCchPrintf(szStatusMessage, _countof(szStatusMessage),
+			L" %-13s v = %0.2f; w = %0.2f; FPS = %0.2f; Time = %.0f s",
+			szControlStatusMessage, cmd[0], cmd[1], fps, (nTime - m_nStartTime) / 1.0e7);
+
+		if (SetStatusMessage(szStatusMessage, 500, false))
+		{
+			m_nLastCounter = qpcNow.QuadPart;
+			m_nFramesSinceUpdate = 0;
+		}
+		
+		
     }
 
 	

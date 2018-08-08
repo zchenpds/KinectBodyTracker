@@ -10,6 +10,7 @@
 #include "SyncSocket.h"
 #include "Config.h"
 #include "SyncSocket.h"
+#include "robot.h"
 
 typedef enum _ControlStatus ControlStatus;
 enum _ControlStatus
@@ -93,6 +94,7 @@ private:
 
 	//
 	SyncSocket*             m_pSyncSocket;
+	Robot*                  m_pRobot;
 
 	// ROS Publisher
 	HWND                    m_hWndButtonFollow;
