@@ -15,8 +15,12 @@ typedef const RobotState *pcRobotState;
 class Robot
 {
 private:
+	//Aria stuff
 	ArRobot*                    m_pArRobot;
 	ArRobotConnector*           m_pRobotConn;
+	ArArgumentBuilder*          m_pArgs;
+	ArArgumentParser*           m_pParser;
+	// My stuff
 	RobotState                  m_State;
 	bool                        m_bInitSucceeded;
 public:

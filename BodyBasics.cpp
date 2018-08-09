@@ -104,6 +104,8 @@ CBodyBasics::CBodyBasics() :
 	m_pConfig = new Config();
 	m_pSyncSocket = new SyncSocket();
 	m_pRobot = new Robot();
+
+	loadControlParameters();
 	
 }
   
@@ -232,6 +234,18 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
     }
 
     return static_cast<int>(msg.wParam);
+}
+
+void CBodyBasics::loadControlParameters()
+{
+	m_pConfig->load();
+	m_pConfig->assign("pzGoal", pzGoal);
+	m_pConfig->assign("pzScale", pzScale);
+	m_pConfig->assign("pxScale", pxScale);
+	m_pConfig->assign("vMax", vMax);
+	m_pConfig->assign("vMin", vMin);
+	m_pConfig->assign("wMax", wMax);
+	m_pConfig->assign("wMin", wMin);
 }
 
 /// <summary>
@@ -384,14 +398,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				else if (m_hWndButtonLoad == hButton)
 				{
 					// Load button
-					m_pConfig->load();
-					m_pConfig->assign("pzGoal", pzGoal);
-					m_pConfig->assign("pzScale", pzScale);
-					m_pConfig->assign("pxScale", pxScale);
-					m_pConfig->assign("vMax", vMax);
-					m_pConfig->assign("vMin", vMin);
-					m_pConfig->assign("wMax", wMax);
-					m_pConfig->assign("wMin", wMin);
+					loadControlParameters();
 				}
 				break;
 			}
@@ -605,7 +612,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				<< joints[jt].Position.Z << ",";
 			
 			// Write robot states to a csv file
-			m_pRobot->updateState();
+			//m_pRobot->updateState();
 			float * pState = (float *)m_pRobot->getState();
 			for (int i = 0; i < 5; i++)
 				*m_pCsvFile << pState[i] << ",";

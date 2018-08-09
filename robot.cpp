@@ -5,9 +5,32 @@
 Robot::Robot() :
 	m_pArRobot(NULL),
 	m_pRobotConn(NULL),
+	m_pArgs(NULL),
+	m_pParser(NULL),
 	m_bInitSucceeded(false)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
+
+	// Initialize some global data
+	Aria::init();
+
+	m_pArgs = new ArArgumentBuilder;
+
+	// This object parses program options
+	m_pParser = new ArArgumentParser(m_pArgs);
+
+	// Load some default values for command line arguments from the ARIAARGS environment variable.
+	m_pParser->loadDefaultArguments();
+
+	m_pArgs->add("-laserPort %s", "COM3");
+	m_pArgs->add("-robotPort %s", "COM4");
+
+	// Central object that is an interface to the robot and its integrated
+	// devices, and which manages control of the robot by the rest of the program.
+	m_pArRobot = new ArRobot();
+
+	// Object that connects to the robot or simulator using program options
+	m_pRobotConn = new ArRobotConnector(m_pParser, m_pArRobot);
 }
 
 
@@ -17,35 +40,18 @@ Robot::~Robot()
 	Aria::exit(1);
 	delete m_pRobotConn;
 	delete m_pArRobot;
+	delete m_pArgs;
+	delete m_pParser;
 }
 
 bool Robot::init(WCHAR *pszText, int len)
 {
-	// Initialize some global data
-	Aria::init();
-
-	ArArgumentBuilder args;
-
-	// This object parses program options
-	ArArgumentParser parser(&args);
-
-	// Load some default values for command line arguments from the ARIAARGS environment variable.
-	parser.loadDefaultArguments();
-
-	args.add("-laserPort %s", "COM3");
-	args.add("-robotPort %s", "COM4");
-
-	// Central object that is an interface to the robot and its integrated
-	// devices, and which manages control of the robot by the rest of the program.
-	m_pArRobot = new ArRobot();
-
-	// Object that connects to the robot or simulator using program options
-	ArRobotConnector * m_pRobotConn = new ArRobotConnector(&parser, m_pArRobot);
+	
 
 	// If the robot has an Analog Gyro, this object will activate it, and 
 	// if the robot does not automatically use the gyro to correct heading,
 	// this object reads data from it and corrects the pose in ArRobot
-	ArAnalogGyro gyro(m_pArRobot);
+	//ArAnalogGyro gyro(m_pArRobot);
 
 	// Connect to the robot, get some initial data from it such as type and name,
 	// and then load parameter files for this robot.
@@ -62,10 +68,10 @@ bool Robot::init(WCHAR *pszText, int len)
 	}
 
 	// Connector for laser rangefinders
-	//ArLaserConnector laserConnector(&parser, m_pArRobot, m_pRobotConn);
+	//ArLaserConnector laserConnector(m_pParser, m_pArRobot, m_pRobotConn);
 
 	// Connector for compasses
-	//ArCompassConnector compassConnector(&parser);
+	//ArCompassConnector compassConnector(m_pParser);
 
 	// Parse the command line options.
 	if (!Aria::parseArgs())
@@ -82,6 +88,8 @@ bool Robot::init(WCHAR *pszText, int len)
 	//m_pArRobot->addRangeDevice(&sonarDev);
 
 	m_pArRobot->enableMotors();
+
+	m_pArRobot->runAsync(true);
 
 	m_bInitSucceeded = true;
 	return true; // init is successful

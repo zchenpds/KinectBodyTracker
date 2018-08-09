@@ -109,6 +109,8 @@ private:
 		                    pzScale, pxScale, 
 		                    vMax, vMin, wMax, wMin;
 
+	void                    loadControlParameters();
+
     /// <summary>
     /// Main processing function
     /// </summary>
