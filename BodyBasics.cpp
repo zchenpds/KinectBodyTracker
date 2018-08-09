@@ -604,7 +604,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				INT64 tsDiff = t0Windows - m_pSyncSocket->m_tsWindows; 
 				*m_pCsvFile << tsDiff << ",";
 			}
-			
+
 			// Write joint states to a csv file
 			for (auto &jt : jointTypeList)
 				*m_pCsvFile << joints[jt].Position.X << ","
@@ -612,7 +612,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				<< joints[jt].Position.Z << ",";
 			
 			// Write robot states to a csv file
-			//m_pRobot->updateState();
+			m_pRobot->updateState();
 			float * pState = (float *)m_pRobot->getState();
 			for (int i = 0; i < 5; i++)
 				*m_pCsvFile << pState[i] << ",";
