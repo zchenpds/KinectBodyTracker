@@ -103,9 +103,10 @@ CBodyBasics::CBodyBasics() :
 	//*m_pCsvFile << "123" << std::endl; // Test write
 	m_pConfig = new Config();
 	m_pSyncSocket = new SyncSocket();
-	m_pRobot = new Robot();
+	m_pRobot = new Robot(m_pConfig);
 
-	loadControlParameters();
+	m_pConfig->load();
+	setParams();
 	
 }
   
@@ -175,32 +176,71 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
 	RECT rc;
 	GetWindowRect(GetDlgItem(m_hWnd, IDC_VIDEOVIEW), &rc);
-
+	int heightButton = 40, widthButton = 180, 
+		xButton = rc.right + 20, yButton = 20;
+	int ySep = 20;
+	
+	// Button: Start following.
 	m_hWndButtonFollow = CreateWindow(
 		L"BUTTON",  // Predefined class; Unicode assumed 
-		L"Stop/Follow",      // Button text 
+		L" Start following",      // Button text 
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-		rc.right + 20,  // x position 
-		20,           // y position 
-		113,          // Button width
-		40,        // Button height
+		xButton,			// x position 
+		yButton,			// y position 
+		widthButton,		// Button width
+		heightButton,		// Button height
 		hWndApp,    // Parent window
 		NULL,       // No menu.
 		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
 		NULL);      // Pointer not needed.
+	yButton += ySep + heightButton;
 
+	// Button: Open Config.
+	m_hWndButtonOpenConfig = CreateWindow(
+		L"BUTTON",  // Predefined class; Unicode assumed 
+		L"Open Config",      // Button text 
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
+		xButton,			// x position 
+		yButton,			// y position 
+		widthButton,		// Button width
+		heightButton,		// Button height
+		hWndApp,    // Parent window
+		NULL,       // No menu.
+		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
+		NULL);      // Pointer not needed.
+	yButton += ySep + heightButton;
+
+	// Button: Load.
 	m_hWndButtonLoad = CreateWindow(
 		L"BUTTON",  // Predefined class; Unicode assumed 
-		L"Load",      // Button text 
+		L"Load Config",      // Button text 
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-		rc.right + 20,  // x position 
-		80,           // y position 
-		113,          // Button width
-		40,        // Button height
+		xButton,			// x position 
+		yButton,			// y position 
+		widthButton,		// Button width
+		heightButton,		// Button height
 		hWndApp,    // Parent window
 		NULL,       // No menu.
 		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
 		NULL);      // Pointer not needed.
+	yButton += ySep + heightButton;
+
+	// Text field: Load Status.
+	yButton -= ySep / 2;
+	int heightText = 20;
+	m_hWndStaticLoad = CreateWindow(
+		L"STATIC",  // Predefined class; Unicode assumed 
+		L"",        // Field text 
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
+		xButton,		// x position 
+		yButton,		// y position 
+		widthButton,	// width
+		heightText,		// height
+		hWndApp,    // Parent window
+		NULL,       // No menu.
+		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
+		NULL);      // Pointer not needed.
+	yButton += ySep / 2 + heightText;
 
     // Show window
     ShowWindow(hWndApp, nCmdShow);
@@ -236,9 +276,8 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
     return static_cast<int>(msg.wParam);
 }
 
-void CBodyBasics::loadControlParameters()
+void CBodyBasics::setParams()
 {
-	m_pConfig->load();
 	m_pConfig->assign("pzGoal", pzGoal);
 	m_pConfig->assign("pzScale", pzScale);
 	m_pConfig->assign("pxScale", pxScale);
@@ -391,14 +430,33 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				{
 					// Follow/stop button
 					if (m_nControlStatus == ControlStatus_Stopped)
+					{
 						m_nControlStatus = ControlStatus_Following;
+						SetWindowText(m_hWndButtonFollow, L" Stop Following");
+					}
 					else
+					{
 						m_nControlStatus = ControlStatus_Stopped;
+						SetWindowText(m_hWndButtonFollow, L" Start Following");
+					}
+					
+				}
+				else if (m_hWndButtonOpenConfig == hButton)
+				{
+					// Open Config Button
+					system("notepad.exe config.txt");
 				}
 				else if (m_hWndButtonLoad == hButton)
 				{
 					// Load button
-					loadControlParameters();
+					m_pConfig->load();
+					m_pConfig->resetCounter();
+					setParams();
+					m_pRobot->setParams();
+					int cnt = m_pConfig->getUpdateCount();
+					TCHAR pszText[32];
+					StringCchPrintf(pszText, 32, L"%d parameter%s updated.", cnt, cnt > 1 ? L"s" : L"");
+					SetWindowText(m_hWndStaticLoad, pszText);
 				}
 				break;
 			}
@@ -627,16 +685,10 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 
 		//m_pRosPublisher->publish(cmd);
 
-		WCHAR szControlStatusMessage[14];
-		if (m_nControlStatus == ControlStatus_Stopped)
-			StringCchPrintf(szControlStatusMessage, _countof(szControlStatusMessage), L" %s", L"Stopped");
-		else
-			StringCchPrintf(szControlStatusMessage, _countof(szControlStatusMessage), L" %s", L"Following");
-
 		WCHAR szStatusMessage[64];
 		StringCchPrintf(szStatusMessage, _countof(szStatusMessage),
-			L" %-13s v = %0.2f; w = %0.2f; FPS = %0.2f; Time = %.0f s",
-			szControlStatusMessage, cmd[0], cmd[1], fps, (nTime - m_nStartTime) / 1.0e7);
+			L" v = %0.2f; w = %0.2f; FPS = %0.2f; Time = %.0f s",
+			cmd[0], cmd[1], fps, (nTime - m_nStartTime) / 1.0e7);
 
 		if (SetStatusMessage(szStatusMessage, 500, false))
 		{

@@ -1,6 +1,6 @@
 #pragma once
 #include "Aria.h"
-
+#include "Config.h"
 typedef struct RobotState_ {
 	float       x; // meter
 	float       y; // meter
@@ -23,11 +23,13 @@ private:
 	// My stuff
 	RobotState                  m_State;
 	bool                        m_bInitSucceeded;
+	Config*                     m_pConfig;
 public:
 public:
-	Robot();
+	Robot(Config* pConfig);
 	~Robot();
 	bool init(WCHAR *pszText, int len);
+	void setParams();
 	void updateState();
 	pcRobotState getState();
 	void setCmd(float v, float w);

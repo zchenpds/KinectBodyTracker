@@ -6,11 +6,11 @@
 
 
 
-Config::Config(const std::string & fileName)
+Config::Config(const std::string & fileName):
+	m_countUpdates(0)
 {
 	load(fileName);
 }
-
 
 Config::~Config()
 {
@@ -39,26 +39,45 @@ void Config::load(const std::string & fileName)
 
 bool Config::assign(const std::string & strKey, std::string & strValue)
 {
-	std::map<std::string, std::string>::iterator it;
+	ConfigParams::iterator it;
 	it = m_mapParams.find(strKey);
 	if (it == m_mapParams.end())
 		return false; // Failed to find the parameter.
 	else
 	{
-		strValue = m_mapParams[strKey];
+		if (strValue != m_mapParams[strKey])
+		{
+			m_countUpdates++;
+			strValue = m_mapParams[strKey];
+		}		
 		return true; // Succeeded in assigning the config parameter
 	}
 }
 
 bool Config::assign(const std::string & strKey, float & fValue)
 {
-	std::map<std::string, std::string>::iterator it;
+	ConfigParams::iterator it;
 	it = m_mapParams.find(strKey);
 	if (it == m_mapParams.end())
 		return false; // Failed to find the parameter.
 	else
 	{
-		fValue = stof(m_mapParams[strKey]);
+		float fValueNew = stof(m_mapParams[strKey]);
+		if (fValue != fValueNew)
+		{
+			m_countUpdates++;
+			fValue = fValueNew;
+		}
 		return true; // Succeeded in assigning the config parameter
 	}
+}
+
+void Config::resetCounter()
+{
+	m_countUpdates = 0;
+}
+
+int Config::getUpdateCount()
+{
+	return m_countUpdates;
 }

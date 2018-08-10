@@ -2,12 +2,13 @@
 #include <strsafe.h>
 
 
-Robot::Robot() :
+Robot::Robot(Config* pConfig):
 	m_pArRobot(NULL),
 	m_pRobotConn(NULL),
 	m_pArgs(NULL),
 	m_pParser(NULL),
-	m_bInitSucceeded(false)
+	m_bInitSucceeded(false),
+	m_pConfig(pConfig)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
 
@@ -93,6 +94,11 @@ bool Robot::init(WCHAR *pszText, int len)
 
 	m_bInitSucceeded = true;
 	return true; // init is successful
+}
+
+void Robot::setParams()
+{
+
 }
 
 void Robot::updateState()
