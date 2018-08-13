@@ -388,22 +388,8 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			//m_pRosPublisher = new RosPublisher;
 
 			//
-			const int ERROR_MESSAGE_LENGTH = 128;
-			WCHAR pszText[ERROR_MESSAGE_LENGTH];
-			if (!m_pSyncSocket->init(pszText, ERROR_MESSAGE_LENGTH))
-			{
-				StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, L"%s Continue anyway?", pszText);
-				int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
-				if (msgboxID == IDNO)
-					DestroyWindow(hWnd);
-			}
-			if (!m_pRobot->init(pszText, ERROR_MESSAGE_LENGTH))
-			{
-				StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, L"%s Continue anyway?", pszText);
-				int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
-				if (msgboxID == IDNO)
-					DestroyWindow(hWnd);
-			}
+			if (!m_pSyncSocket->init(hWnd)) break;
+			if (!m_pRobot->init(hWnd)) break;
 
 			SetFocus(hWnd);
         }

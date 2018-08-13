@@ -20,16 +20,23 @@ SyncSocket::~SyncSocket()
 	releaseResource();
 }
 
-bool SyncSocket::init(WCHAR *pszText, int len)
+bool SyncSocket::init(HWND hWnd)
 {
 	int iResult;
 	WSADATA wsaData;
+
+	const int ERROR_MESSAGE_LENGTH = 128;
+	WCHAR pszText[ERROR_MESSAGE_LENGTH];
 
 	// Initialize Winsock
 	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != 0)
 	{
-		StringCchPrintf(pszText, len, L"WSAStartup failed with error %d", iResult);
+		StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, 
+			L"WSAStartup failed with error %d\n Continue anyway?", iResult);
+		int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
+		if (msgboxID == IDNO)
+			DestroyWindow(hWnd);
 		m_bWs2Loaded = false;
 		return false;
 	}
@@ -41,7 +48,11 @@ bool SyncSocket::init(WCHAR *pszText, int len)
 	m_socketListen = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (INVALID_SOCKET == m_socketListen)
 	{
-		StringCchPrintf(pszText, len, L"socket failed with error %d\n", iResult);
+		StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, 
+			L"socket failed with error %d\n Continue anyway?", iResult);
+		int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
+		if (msgboxID == IDNO)
+			DestroyWindow(hWnd);
 		releaseResource();
 		return false;
 	}
@@ -56,7 +67,11 @@ bool SyncSocket::init(WCHAR *pszText, int len)
 	iResult = ioctlsocket(m_socketListen, FIONBIO, &iMode);
 	if (iResult != NO_ERROR)
 	{
-		StringCchPrintf(pszText, len, L"ioctlsocket failed with error %d\n", WSAGetLastError());
+		StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, 
+			L"ioctlsocket failed with error %d\n Continue anyway?", WSAGetLastError());
+		int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
+		if (msgboxID == IDNO)
+			DestroyWindow(hWnd);
 		releaseResource();
 		return false;
 	}
@@ -72,12 +87,15 @@ bool SyncSocket::init(WCHAR *pszText, int len)
 
 	iResult = bind(m_socketListen, (const sockaddr *)&addrListen, sizeof(addrListen));
 	if (iResult != 0) {
-		StringCchPrintf(pszText, len, L"bind failed with error %d\n", WSAGetLastError());
+		StringCchPrintf(pszText, ERROR_MESSAGE_LENGTH, 
+			L"bind failed with error %d\n Continue anyway?", WSAGetLastError());
+		int msgboxID = MessageBox(hWnd, pszText, NULL, MB_YESNO | MB_ICONWARNING);
+		if (msgboxID == IDNO)
+			DestroyWindow(hWnd);
 		releaseResource();
 		return false;
 	}
 	m_bInitSucceeded = true;
-	StringCchPrintf(pszText, len, L"OK!");
 	return true;
 }
 

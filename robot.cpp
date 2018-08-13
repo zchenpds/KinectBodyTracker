@@ -9,6 +9,7 @@ Robot::Robot(Config* pConfig):
 	m_pParser(NULL),
 	m_bInitSucceeded(false),
 	m_pConfig(pConfig)
+	m_hWnd(NULL)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
 
@@ -45,9 +46,9 @@ Robot::~Robot()
 	delete m_pParser;
 }
 
-bool Robot::init(WCHAR *pszText, int len)
+bool Robot::init(HWND hWnd)
 {
-	
+	m_hWnd = hWnd;
 
 	// If the robot has an Analog Gyro, this object will activate it, and 
 	// if the robot does not automatically use the gyro to correct heading,
@@ -59,12 +60,20 @@ bool Robot::init(WCHAR *pszText, int len)
 	if (!m_pRobotConn->connectRobot())
 	{
 		// Error connecting:
-		StringCchPrintf(pszText, len, L"Error connecting to the robot! COM port might be wrong.");
+		int msgboxID = MessageBox(hWnd, 
+			L"Error connecting to the robot! COM port might be wrong.  Continue anyway?", 
+			NULL, MB_YESNO | MB_ICONWARNING);
+		if (msgboxID == IDNO)
+			DestroyWindow(hWnd);
 		return false;
 	}
 	if (!m_pArRobot->isConnected())
 	{
-		StringCchPrintf(pszText, len, L"Internal error: robot connector succeeded but ArRobot::isConnected() is false!");
+		int msgboxID = MessageBox(hWnd, 
+			L"Internal error: robot connector succeeded but ArRobot::isConnected() is false! Continue anyway?", 
+			NULL, MB_YESNO | MB_ICONWARNING);
+		if (msgboxID == IDNO)
+			DestroyWindow(hWnd);
 		return false;
 	}
 
@@ -77,7 +86,11 @@ bool Robot::init(WCHAR *pszText, int len)
 	// Parse the command line options.
 	if (!Aria::parseArgs())
 	{
-		StringCchPrintf(pszText, len, L"RosAria: ARIA error parsing ARIA startup parameters!");
+		int msgboxID = MessageBox(hWnd, 
+			L"RosAria: ARIA error parsing ARIA startup parameters! Continue anyway?", 
+			NULL, MB_YESNO | MB_ICONWARNING);
+		if (msgboxID == IDNO)
+			DestroyWindow(hWnd);
 		return false;
 	}
 

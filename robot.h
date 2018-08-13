@@ -24,12 +24,13 @@ private:
 	RobotState                  m_State;
 	bool                        m_bInitSucceeded;
 	Config*                     m_pConfig;
+	HWND						m_hWnd;
 public:
 public:
 	Robot(Config* pConfig);
 	~Robot();
-	bool init(WCHAR *pszText, int len);
 	void setParams();
+	bool init(HWND hWnd);
 	void updateState();
 	pcRobotState getState();
 	void setCmd(float v, float w);

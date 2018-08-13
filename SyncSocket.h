@@ -3,7 +3,9 @@
 #ifndef UNICODE
 #define UNICODE
 #endif
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -39,7 +41,7 @@ public:
 public:
 	SyncSocket();
 	~SyncSocket();
-	bool init(WCHAR *pszText, int len);
+	bool init(HWND hWnd);
 	OdroidTimestamp receive(INT64 tsWindows, SportSolePacket * pPacket = NULL);
 protected:
 	bool checkSportSolePacket(uint8_t * buffer);
