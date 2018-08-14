@@ -12,5 +12,5 @@ wMax=0.8
 wMin=-0.6
 
 VmDistance=2.5
-vScale=1.3
-wScale=0.3
+vScale=-1.1
+wScale=0.9

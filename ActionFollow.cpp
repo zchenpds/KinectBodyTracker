@@ -34,11 +34,12 @@ ArActionDesired *ActionFollow::fire(ArActionDesired currentDesired)
 		return &m_ActionDesired;
 	}
 
-	float v, w;
-	m_pRobot->calcControl(&v, &w);
+	float v, w, th;
+	m_pRobot->calcControl(&v, &w, &th);
 
 	m_ActionDesired.setVel(v * 1000.0);
 	m_ActionDesired.setRotVel(w * 180.0 / M_PI);
+	//m_ActionDesired.setHeading(th * 180.0 / M_PI);
 	return &m_ActionDesired;
 	
 }

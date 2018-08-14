@@ -202,7 +202,7 @@ bool Robot::isVisualCmdTooOld()
 		return false;
 }
 
-void Robot::calcControl(float * pV, float * pW)
+void Robot::calcControl(float * pV, float * pW, float * pTh)
 {
 	m_pArRobot->lock();
 
@@ -219,6 +219,7 @@ void Robot::calcControl(float * pV, float * pW)
 
 	*pV = m_Params.vScale * distanceToGoal;
 	*pW = m_Params.wScale * headingOfGoal;
+	*pTh = atan2(yToGoal, xToGoal);
 
 	m_pArRobot->unlock();
 }

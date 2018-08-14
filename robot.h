@@ -73,6 +73,6 @@ public:
 	void updateVisualCmd(float x, float z);
 	bool isVisualCmdTooOld();
 
-	void calcControl(float * pV, float * pW);
+	void calcControl(float * pV, float * pW, float * pTh);
 	
 };
