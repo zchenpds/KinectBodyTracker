@@ -68,7 +68,6 @@ CBodyBasics::CBodyBasics() :
     m_pBrushHandOpen(NULL),
     m_pBrushHandLasso(NULL),
 	m_pRosPublisher(NULL),
-	m_nControlStatus(ControlStatus_Stopped),
 	m_pConfig(NULL),
 	m_pRobot(NULL),
 	m_pSyncSocket(NULL),
@@ -103,7 +102,7 @@ CBodyBasics::CBodyBasics() :
 	//*m_pCsvFile << "123" << std::endl; // Test write
 	m_pConfig = new Config();
 	m_pSyncSocket = new SyncSocket();
-	m_pRobot = new Robot(m_pConfig);
+	m_pRobot = new Robot();
 
 	m_pConfig->load();
 	setParams();
@@ -285,6 +284,8 @@ void CBodyBasics::setParams()
 	m_pConfig->assign("vMin", vMin);
 	m_pConfig->assign("wMax", wMax);
 	m_pConfig->assign("wMin", wMin);
+
+	m_pRobot->setParams(m_pConfig);
 }
 
 /// <summary>
@@ -415,14 +416,15 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				if (m_hWndButtonFollow == hButton)
 				{
 					// Follow/stop button
-					if (m_nControlStatus == ControlStatus_Stopped)
+					
+					if (m_pRobot->getState()->isFollowing == false)
 					{
-						m_nControlStatus = ControlStatus_Following;
+						m_pRobot->startFollowing();
 						SetWindowText(m_hWndButtonFollow, L" Stop Following");
 					}
 					else
 					{
-						m_nControlStatus = ControlStatus_Stopped;
+						m_pRobot->stopFollowing();
 						SetWindowText(m_hWndButtonFollow, L" Start Following");
 					}
 					
@@ -438,7 +440,6 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 					m_pConfig->load();
 					m_pConfig->resetCounter();
 					setParams();
-					m_pRobot->setParams();
 					int cnt = m_pConfig->getUpdateCount();
 					TCHAR pszText[32];
 					StringCchPrintf(pszText, 32, L"%d parameter%s updated.", cnt, cnt > 1 ? L"s" : L"");
@@ -618,28 +619,24 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			float px = joints[JointType_SpineBase].Position.X;
 			float py = joints[JointType_SpineBase].Position.Y;
 			float pz = joints[JointType_SpineBase].Position.Z;
+
+			m_pRobot->updateVisualCmd(px, pz);
 			
+			/*
 			// Linear velocity
 			cmd[0] = (pz - pzGoal) * pzScale;
 			cmd[0] = max(min(cmd[0], vMax), vMin);
 			// Angular velocity
 			cmd[1] = px * pxScale;
 			cmd[1] = max(min(cmd[1], wMax), wMin);
+			*/
 
-
-			if (m_nControlStatus == ControlStatus_Stopped)
-			{
-				cmd[0] = 0.0;
-				cmd[1] = 0.0;
-			}
-
-			m_pRobot->setCmd(cmd[0], cmd[1]);
 
 			// Write time info to a csv file
 			int jointTypeList[] = { JointType_KneeLeft, JointType_AnkleLeft, JointType_FootLeft,
 				JointType_KneeRight, JointType_AnkleRight, JointType_FootRight };
 			*m_pCsvFile << (nTime - m_nStartTime) / 10000 << ","; // Kinect timestamp in mSecs
-			*m_pCsvFile << m_pSyncSocket->m_tsOdroid << ","; // Odroid timestamp in mSecs
+			*m_pCsvFile << m_pSyncSocket->m_tsOdroid << ","; // Odroid timestamp in uSecs
 			if (m_pSyncSocket->m_tsWindows < 0)
 				*m_pCsvFile << -1 << ","; // No sync packet has been received
 			else
@@ -656,25 +653,32 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				<< joints[jt].Position.Z << ",";
 			
 			// Write robot states to a csv file
-			m_pRobot->updateState();
-			float * pState = (float *)m_pRobot->getState();
+			//m_pRobot->updateState(); // This has been moved to ActionFollow
+			pcRobotState pcState = m_pRobot->getState();
+			if (pcState->tsWindows == 0)
+				*m_pCsvFile << -1 << ","; // No robot packet has been received
+			else
+			{
+				// How many mSecs ago was the last robot packet received
+				*m_pCsvFile << t0Windows - pcState->tsWindows << ",";
+			}
+			float * afState = (float *)pcState;
 			for (int i = 0; i < 5; i++)
-				*m_pCsvFile << pState[i] << ",";
+				*m_pCsvFile << afState[i] << ",";
 			*m_pCsvFile << "\n";
 		}
 		else
 		{
 			cmd[0] = 0.0;
 			cmd[1] = 0.0;
-			m_pRobot->setCmd(cmd[0], cmd[1]);
+			//m_pRobot->setCmd(cmd[0], cmd[1]); // debug
 		}
 
 		//m_pRosPublisher->publish(cmd);
 
 		WCHAR szStatusMessage[64];
 		StringCchPrintf(szStatusMessage, _countof(szStatusMessage),
-			L" v = %0.2f; w = %0.2f; FPS = %0.2f; Time = %.0f s",
-			cmd[0], cmd[1], fps, (nTime - m_nStartTime) / 1.0e7);
+			L" FPS = %0.2f; Time = %.0f s", fps, (nTime - m_nStartTime) / 1.0e7);
 
 		if (SetStatusMessage(szStatusMessage, 500, false))
 		{

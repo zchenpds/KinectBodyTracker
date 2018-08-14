@@ -12,13 +12,6 @@
 #include "SyncSocket.h"
 #include "robot.h"
 
-typedef enum _ControlStatus ControlStatus;
-enum _ControlStatus
-{
-	ControlStatus_Stopped = 0,
-	ControlStatus_Following = 1
-};
-
 void ErrorExit(LPTSTR lpszFunction)
 {
 	// Retrieve the system error message for the last-error code
@@ -136,7 +129,6 @@ private:
 	// ROS Publisher
 	RosPublisher*           m_pRosPublisher;
 	std::ofstream*          m_pCsvFile;
-	ControlStatus           m_nControlStatus;
 	Config*                 m_pConfig;
 
 	// Control parameters

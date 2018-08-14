@@ -2,16 +2,21 @@
 #include <strsafe.h>
 
 
-Robot::Robot(Config* pConfig):
+Robot::Robot():
 	m_pArRobot(NULL),
 	m_pRobotConn(NULL),
 	m_pArgs(NULL),
 	m_pParser(NULL),
-	m_bInitSucceeded(false),
-	m_pConfig(pConfig)
+	m_pActionFollow(NULL),
 	m_hWnd(NULL)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
+	m_State.isFollowing = false;
+
+	m_Params.VmDistance = 2.5;
+	m_Params.VmHeading = 0;
+	m_Params.vScale = 1.2;
+	m_Params.wScale = 0.3;
 
 	// Initialize some global data
 	Aria::init();
@@ -33,6 +38,8 @@ Robot::Robot(Config* pConfig):
 
 	// Object that connects to the robot or simulator using program options
 	m_pRobotConn = new ArRobotConnector(m_pParser, m_pArRobot);
+
+	m_pActionFollow = new ActionFollow(this);
 }
 
 
@@ -44,11 +51,13 @@ Robot::~Robot()
 	delete m_pArRobot;
 	delete m_pArgs;
 	delete m_pParser;
+	delete m_pActionFollow;
 }
 
 bool Robot::init(HWND hWnd)
 {
 	m_hWnd = hWnd;
+	m_pActionFollow->init(hWnd);
 
 	// If the robot has an Analog Gyro, this object will activate it, and 
 	// if the robot does not automatically use the gyro to correct heading,
@@ -61,7 +70,7 @@ bool Robot::init(HWND hWnd)
 	{
 		// Error connecting:
 		int msgboxID = MessageBox(hWnd, 
-			L"Error connecting to the robot! COM port might be wrong.  Continue anyway?", 
+			L"robot: Error connecting to the robot! COM port might be wrong.  Continue anyway?", 
 			NULL, MB_YESNO | MB_ICONWARNING);
 		if (msgboxID == IDNO)
 			DestroyWindow(hWnd);
@@ -70,7 +79,7 @@ bool Robot::init(HWND hWnd)
 	if (!m_pArRobot->isConnected())
 	{
 		int msgboxID = MessageBox(hWnd, 
-			L"Internal error: robot connector succeeded but ArRobot::isConnected() is false! Continue anyway?", 
+			L"robot: robot connector succeeded but ArRobot::isConnected() is false! Continue anyway?", 
 			NULL, MB_YESNO | MB_ICONWARNING);
 		if (msgboxID == IDNO)
 			DestroyWindow(hWnd);
@@ -87,7 +96,7 @@ bool Robot::init(HWND hWnd)
 	if (!Aria::parseArgs())
 	{
 		int msgboxID = MessageBox(hWnd, 
-			L"RosAria: ARIA error parsing ARIA startup parameters! Continue anyway?", 
+			L"robot: ARIA error parsing ARIA startup parameters! Continue anyway?", 
 			NULL, MB_YESNO | MB_ICONWARNING);
 		if (msgboxID == IDNO)
 			DestroyWindow(hWnd);
@@ -95,27 +104,35 @@ bool Robot::init(HWND hWnd)
 	}
 
 	// Used to access and process sonar range data
-	//ArSonarDevice sonarDev;
+	ArSonarDevice sonarDev;
 
 
 	// Attach sonarDev to the robot so it gets data from it.
-	//m_pArRobot->addRangeDevice(&sonarDev);
+	m_pArRobot->addRangeDevice(&sonarDev);
+
+	m_pArRobot->addAction(m_pActionFollow, 50);
 
 	m_pArRobot->enableMotors();
 
 	m_pArRobot->runAsync(true);
 
-	m_bInitSucceeded = true;
 	return true; // init is successful
 }
 
-void Robot::setParams()
+void Robot::setParams(Config * pConfig)
 {
-
+	pConfig->assign("VmDistance", m_Params.VmDistance);
+	pConfig->assign("vScale", m_Params.vScale);
+	pConfig->assign("wScale", m_Params.wScale);
+	m_pActionFollow->setParams(pConfig);
 }
 
-void Robot::updateState()
+void Robot::updateState() // To do: add mutex.
 {
+	if (!m_pArRobot->isConnected()) 
+		return;
+	m_pArRobot->lock();
+
 	ArPose Pose;
 	Pose = m_pArRobot->getPose();
 	m_State.x = Pose.getX() / 1000.0;
@@ -125,6 +142,12 @@ void Robot::updateState()
 	m_State.w = m_pArRobot->getRotVel() * M_PI / 180.0;
 	m_State.batteryVolt = m_pArRobot->getRealBatteryVoltageNow();
 	m_State.areMotorsEnabled = m_pArRobot->areMotorsEnabled();
+	m_State.tsWindows = GetTickCount64();
+
+	m_State.xVm = m_State.x + m_Params.VmDistance * cos(m_State.th + m_Params.VmHeading);
+	m_State.yVm = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);
+
+	m_pArRobot->unlock();
 }
 
 pcRobotState Robot::getState()
@@ -134,10 +157,69 @@ pcRobotState Robot::getState()
 
 void Robot::setCmd(float v, float w)
 {
-	if (!m_bInitSucceeded) return;
-
+	if (!m_pArRobot->isConnected())
+		return;
 	m_pArRobot->lock();
+
 	m_pArRobot->setVel(v * 1e3);
 	m_pArRobot->setRotVel(w * 180 / M_PI);
+
 	m_pArRobot->unlock();
 }
+
+void Robot::startFollowing()
+{
+	m_State.isFollowing = true;
+}
+
+void Robot::stopFollowing()
+{
+	m_State.isFollowing = false;
+}
+
+void Robot::updateVisualCmd(float x, float z)
+{
+	m_pArRobot->lock();
+
+	m_VisualCmd.tsWindows = GetTickCount64();
+
+	// This condition should be easily satisfied since SIP packets arrive every 100 ms
+	if (m_VisualCmd.tsWindows - m_State.tsWindows < 150)
+	{
+		m_VisualCmd.xVmGoal = m_State.x + z * cos(m_State.th) - x * sin(m_State.th);
+		m_VisualCmd.yVmGoal = m_State.y + z * sin(m_State.th) + x * cos(m_State.th);
+	}
+
+	m_pArRobot->unlock();
+}
+
+bool Robot::isVisualCmdTooOld()
+{
+	INT64 tsWindows = GetTickCount64();
+	if (tsWindows - m_VisualCmd.tsWindows > 1000)
+		return true;
+	else
+		return false;
+}
+
+void Robot::calcControl(float * pV, float * pW)
+{
+	m_pArRobot->lock();
+
+	float xToGoal, yToGoal;
+	float distanceToGoal, headingOfGoal;
+	xToGoal = m_VisualCmd.xVmGoal - m_State.x;
+	yToGoal = m_VisualCmd.yVmGoal - m_State.y;
+
+	distanceToGoal = sqrt(pow(xToGoal, 2) + pow(yToGoal, 2)) - m_Params.VmDistance;
+	headingOfGoal = atan2(yToGoal, xToGoal) - m_State.th;
+
+	while (headingOfGoal > M_PI) headingOfGoal -= 2 * M_PI;
+	while (headingOfGoal < -M_PI) headingOfGoal += 2 * M_PI;
+
+	*pV = m_Params.vScale * distanceToGoal;
+	*pW = m_Params.wScale * headingOfGoal;
+
+	m_pArRobot->unlock();
+}
+

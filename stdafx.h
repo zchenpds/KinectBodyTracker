@@ -14,6 +14,7 @@
 
 // Windows Header Files
 #include <windows.h>
+#include <strsafe.h>
 
 #include <Shlobj.h>
 
