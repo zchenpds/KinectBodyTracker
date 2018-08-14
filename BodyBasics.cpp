@@ -175,10 +175,41 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
 	RECT rc;
 	GetWindowRect(GetDlgItem(m_hWnd, IDC_VIDEOVIEW), &rc);
-	int heightButton = 40, widthButton = 180, 
+	int heightButton = 60, widthButton = 330, 
 		xButton = rc.right + 20, yButton = 20;
 	int ySep = 20;
+
+	struct ControlProperty {
+		HWND * phWnd;
+		LPCWSTR text;
+		int w; 
+		int h;
+	};
 	
+	ControlProperty CPs[] = { 
+		{&m_hWndButtonFollow, L"Start following", widthButton, heightButton * 8 },
+		{ &m_hWndButtonOpenConfig, L"Open Config", widthButton, heightButton },
+		{ &m_hWndButtonLoad, L"Load Config", widthButton, heightButton }
+	};
+
+	for (int i = 0, x = xButton, y = yButton;
+		i < sizeof(CPs) / sizeof(CPs[0]); 
+		y += CPs[i].h + ySep, i++)
+	{
+		*(CPs[i].phWnd) = CreateWindow(
+			L"BUTTON",  // Predefined class; Unicode assumed 
+			CPs[i].text,      // Button text 
+			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
+			x,			// x position 
+			y,			// y position 
+			CPs[i].w,		// Button width
+			CPs[i].h,		// Button height
+			hWndApp,    // Parent window
+			NULL,       // No menu.
+			(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
+			NULL);      // Pointer not needed.;
+	}
+	/*
 	// Button: Start following.
 	m_hWndButtonFollow = CreateWindow(
 		L"BUTTON",  // Predefined class; Unicode assumed 
@@ -186,8 +217,8 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
 		xButton,			// x position 
 		yButton,			// y position 
-		widthButton,		// Button width
-		heightButton,		// Button height
+		widthButton * 3,		// Button width
+		heightButton * 9,		// Button height
 		hWndApp,    // Parent window
 		NULL,       // No menu.
 		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
@@ -240,6 +271,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
 		NULL);      // Pointer not needed.
 	yButton += ySep / 2 + heightText;
+	*/
 
     // Show window
     ShowWindow(hWndApp, nCmdShow);
