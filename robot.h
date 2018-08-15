@@ -53,6 +53,7 @@ protected:
 	VisualCmd					m_VisualCmd; // not initalized
 	ControlParams				m_Params; // not initialized
 	ActionFollow*				m_pActionFollow;
+	ArActionLimiterForwards*    m_pActionLimiterForwards;
 	HWND						m_hWnd;
 public:
 public:

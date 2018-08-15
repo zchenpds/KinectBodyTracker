@@ -8,6 +8,7 @@ Robot::Robot():
 	m_pArgs(NULL),
 	m_pParser(NULL),
 	m_pActionFollow(NULL),
+	m_pActionLimiterForwards(NULL),
 	m_hWnd(NULL)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
@@ -40,6 +41,7 @@ Robot::Robot():
 	m_pRobotConn = new ArRobotConnector(m_pParser, m_pArRobot);
 
 	m_pActionFollow = new ActionFollow(this);
+	m_pActionLimiterForwards = new ArActionLimiterForwards();
 }
 
 
@@ -52,6 +54,7 @@ Robot::~Robot()
 	delete m_pArgs;
 	delete m_pParser;
 	delete m_pActionFollow;
+	delete m_pActionLimiterForwards;
 }
 
 bool Robot::init(HWND hWnd)
@@ -111,6 +114,7 @@ bool Robot::init(HWND hWnd)
 	m_pArRobot->addRangeDevice(&sonarDev);
 
 	m_pArRobot->addAction(m_pActionFollow, 50);
+	//m_pArRobot->addAction(m_pActionLimiterForwards, 40);
 
 	m_pArRobot->enableMotors();
 
