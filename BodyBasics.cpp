@@ -225,7 +225,10 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 			m_pSyncSocket->receive();
 
 		Update();
-		
+#ifdef ROBOT_USE_MOTION_COMMAND_FUNCTIONS
+		control();
+#endif // ROBOT_USE_MOTION_COMMAND_ACTIONS
+
         while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
         {
 			if (WM_QUIT == msg.message) break;
@@ -263,6 +266,26 @@ void CBodyBasics::log(bool bHeader)
 	m_pRobot->log(m_pCsvFile, bHeader);
 
 	*m_pCsvFile << '\n';
+}
+
+void CBodyBasics::control()
+{
+	m_pRobot->updateState();
+	pcRobotState pcState = m_pRobot->getState();
+	INT64 tsWindows = GetTickCount64();
+
+	float v, w, th;
+	m_pRobot->calcControl(&v, &w, &th);
+
+	if (!pcState->isFollowing /* || // if following is disabled
+							  m_pRobot->isVisualCmdTooOld() */) // or if the visual command is not up-to-date
+	{
+		m_pRobot->setCmd(0.0, 0.0);
+	}
+	else
+	{
+		m_pRobot->setCmd(v, w);
+	}
 }
 
 /// <summary>

@@ -153,6 +153,7 @@ private:
 	//
 	void                    setParams();
 	void					log(bool bHeader = false);
+	void					control();
 
     /// <summary>
     /// Main processing function

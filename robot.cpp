@@ -117,7 +117,11 @@ bool Robot::init(HWND hWnd)
 	// Attach sonarDev to the robot so it gets data from it.
 	m_pArRobot->addRangeDevice(&sonarDev);
 
+
+#ifdef ROBOT_USE_ACTIONS
 	m_pArRobot->addAction(m_pActionFollow, 50);
+#endif // ROBOT_USE_ACTIONS
+
 	//m_pArRobot->addAction(m_pActionLimiterForwards, 40);
 
 	m_pArRobot->enableMotors();

@@ -5,6 +5,8 @@
 #include <fstream>
 #include "stdafx.h"
 
+//#define ROBOT_USE_ACTIONS
+#define ROBOT_USE_MOTION_COMMAND_FUNCTIONS
 
 class ActionFollow;
 
