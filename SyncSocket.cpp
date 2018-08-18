@@ -99,7 +99,7 @@ bool SyncSocket::init(HWND hWnd)
 	return true;
 }
 
-OdroidTimestamp SyncSocket::receive(INT64 tsWindows, SportSolePacket * pPacket)
+OdroidTimestamp SyncSocket::receive(SportSolePacket * pPacket)
 {
 	if (!m_bInitSucceeded) 
 		return (OdroidTimestamp)(-1);
@@ -126,7 +126,7 @@ OdroidTimestamp SyncSocket::receive(INT64 tsWindows, SportSolePacket * pPacket)
 			if (pPacket != NULL)
 				memcpy(pPacket, &packet, sizeof(SportSolePacket));
 			OdroidTimestamp * pOts = (OdroidTimestamp *)packet.Odroid_Timestamp; // assuming big-endian
-			m_tsWindows = tsWindows;
+			m_tsWindows = GetTickCount64();
 			m_tsOdroid = *pOts;
 			return *pOts;
 		}

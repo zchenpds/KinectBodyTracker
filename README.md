@@ -26,9 +26,10 @@ git clone --recurse-submodule https://github.com/zchenpds/KinectBodyTracker
 
 
 ## Output File Format
-1. Kinect Timestamp (mSecs)
-1. Odroid Timestamp (uSecs)
-1. The time that has elapsed since last receipt of an Odroid timestamp (mSecs)
+1. Last available Odroid timestamp (uSecs)
+1. Windows timestamp associated with the last available Odroid timestamp (mSecs)
+1. Last available Kinect timestamp (mSecs)
+1. Windows timestamp associated with the last available Kinect timestamp (mSecs)
 1. Left knee x coordinate (meters, relative to Camera frame)
 1. Left knee y coordinate (meters, relative to Camera frame)
 1. Left knee z coordinate (meters, relative to Camera frame)
@@ -47,7 +48,7 @@ git clone --recurse-submodule https://github.com/zchenpds/KinectBodyTracker
 1. Right foot x coordinate (meters, relative to Camera frame)
 1. Right foot y coordinate (meters, relative to Camera frame)
 1. Right foot z coordinate (meters, relative to Camera frame)
-1. The time that has elapsed since last update of the robot state as follows (mSecs)
+1. Windows timestamp asscociated with the last Robot state update.
 1. Robot x coordinate (meters, relative to initial pose, aka World frame)
 1. Robot y coordinate (meters, relative to initial pose, aka World frame)
 1. Robot orientation (radians, relative to initial pose, aka World frame)

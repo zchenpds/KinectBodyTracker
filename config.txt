@@ -1,16 +1,6 @@
 ros_master=192.168.1.15:11411
 
-pzGoal=2.5
-
-pzScale=1.2
-pxScale = 0.3
-
-vMax=1.0
-vMin=-0.2
-
-wMax=0.8
-wMin=-0.6
-
-VmDistance=2.5
-vScale=-1.1
-wScale=0.9
+VmDistance=2.8
+VmHeading=3.1415927
+vScale=-1.0
+wScale=0.5

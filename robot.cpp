@@ -13,11 +13,15 @@ Robot::Robot():
 {
 	ZeroMemory(&m_State, sizeof(m_State));
 	m_State.isFollowing = false;
+	m_State.tsWindows = -1;
 
 	m_Params.VmDistance = 2.5;
 	m_Params.VmHeading = 0;
 	m_Params.vScale = 1.2;
 	m_Params.wScale = 0.3;
+
+	m_ControlCmd.v = 0.0;
+	m_ControlCmd.w = 0.0;
 
 	// Initialize some global data
 	Aria::init();
@@ -126,16 +130,44 @@ bool Robot::init(HWND hWnd)
 void Robot::setParams(Config * pConfig)
 {
 	pConfig->assign("VmDistance", m_Params.VmDistance);
+	pConfig->assign("VmHeading", m_Params.VmHeading);
 	pConfig->assign("vScale", m_Params.vScale);
 	pConfig->assign("wScale", m_Params.wScale);
 	m_pActionFollow->setParams(pConfig);
+}
+
+void Robot::log(std::ofstream * pOfs, bool bHeader)
+{
+	//m_pArRobot->lock();
+
+	
+	if (pOfs == NULL)
+		return;
+	
+	ConditionalLog(pOfs, "tRW", m_State.tsWindows, bHeader);
+	ConditionalLog(pOfs, "x", m_State.x, bHeader);
+	ConditionalLog(pOfs, "y", m_State.y, bHeader);
+	ConditionalLog(pOfs, "th", m_State.th, bHeader);
+	ConditionalLog(pOfs, "v", m_State.v, bHeader);
+	ConditionalLog(pOfs, "w", m_State.w, bHeader);
+	ConditionalLog(pOfs, "batVolt", m_State.batteryVolt, bHeader);
+	ConditionalLog(pOfs, "isFollowing", m_State.isFollowing, bHeader);
+	ConditionalLog(pOfs, "xVm", m_State.xVm, bHeader);
+	ConditionalLog(pOfs, "yVm", m_State.yVm, bHeader);
+	ConditionalLog(pOfs, "xVmG", m_VisualCmd.xVmGoal, bHeader);
+	ConditionalLog(pOfs, "yVmG", m_VisualCmd.yVmGoal, bHeader);
+	ConditionalLog(pOfs, "vD", m_ControlCmd.v, bHeader);
+	ConditionalLog(pOfs, "wD", m_ControlCmd.w, bHeader);
+	
+
+	//m_pArRobot->unlock();
 }
 
 void Robot::updateState() // To do: add mutex.
 {
 	if (!m_pArRobot->isConnected()) 
 		return;
-	m_pArRobot->lock();
+	//m_pArRobot->lock();
 
 	ArPose Pose;
 	Pose = m_pArRobot->getPose();
@@ -151,7 +183,8 @@ void Robot::updateState() // To do: add mutex.
 	m_State.xVm = m_State.x + m_Params.VmDistance * cos(m_State.th + m_Params.VmHeading);
 	m_State.yVm = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);
 
-	m_pArRobot->unlock();
+
+	//m_pArRobot->unlock();
 }
 
 pcRobotState Robot::getState()
@@ -183,18 +216,19 @@ void Robot::stopFollowing()
 
 void Robot::updateVisualCmd(float x, float z)
 {
-	m_pArRobot->lock();
+	//m_pArRobot->lock();
 
 	m_VisualCmd.tsWindows = GetTickCount64();
-
+	
 	// This condition should be easily satisfied since SIP packets arrive every 100 ms
-	if (m_VisualCmd.tsWindows - m_State.tsWindows < 150)
+	//if (m_VisualCmd.tsWindows - m_State.tsWindows < 150)
 	{
-		m_VisualCmd.xVmGoal = m_State.x + z * cos(m_State.th) - x * sin(m_State.th);
-		m_VisualCmd.yVmGoal = m_State.y + z * sin(m_State.th) + x * cos(m_State.th);
+		float theta = m_State.th + m_Params.VmHeading;
+		m_VisualCmd.xVmGoal = m_State.x + z * cos(theta) - x * sin(theta);
+		m_VisualCmd.yVmGoal = m_State.y + z * sin(theta) + x * cos(theta);
 	}
 
-	m_pArRobot->unlock();
+	//m_pArRobot->unlock();
 }
 
 bool Robot::isVisualCmdTooOld()
@@ -208,7 +242,7 @@ bool Robot::isVisualCmdTooOld()
 
 void Robot::calcControl(float * pV, float * pW, float * pTh)
 {
-	m_pArRobot->lock();
+	//m_pArRobot->lock();
 
 	float xToGoal, yToGoal;
 	float distanceToGoal, headingOfGoal;
@@ -216,15 +250,16 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 	yToGoal = m_VisualCmd.yVmGoal - m_State.y;
 
 	distanceToGoal = sqrt(pow(xToGoal, 2) + pow(yToGoal, 2)) - m_Params.VmDistance;
-	headingOfGoal = atan2(yToGoal, xToGoal) - m_State.th;
 
+	float theta = m_State.th + m_Params.VmHeading;
+	headingOfGoal = atan2(yToGoal, xToGoal) - theta;
 	while (headingOfGoal > M_PI) headingOfGoal -= 2 * M_PI;
 	while (headingOfGoal < -M_PI) headingOfGoal += 2 * M_PI;
 
-	*pV = m_Params.vScale * distanceToGoal;
-	*pW = m_Params.wScale * headingOfGoal;
+	*pV = m_ControlCmd.v = m_Params.vScale * distanceToGoal;
+	*pW = m_ControlCmd.w = m_Params.wScale * headingOfGoal;
 	*pTh = atan2(yToGoal, xToGoal);
 
-	m_pArRobot->unlock();
+	//m_pArRobot->unlock();
 }
 

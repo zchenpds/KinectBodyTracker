@@ -26,20 +26,22 @@ ArActionDesired *ActionFollow::fire(ArActionDesired currentDesired)
 	pcRobotState pcState = m_pRobot->getState();
 	INT64 tsWindows = GetTickCount64();
 	
-	if (!pcState->isFollowing || // if following is disabled
-		m_pRobot->isVisualCmdTooOld()) // or if the visual command is not up-to-date
-	{
-		m_ActionDesired.setVel(0.0);
-		m_ActionDesired.setRotVel(0.0);
-		return &m_ActionDesired;
-	}
-
 	float v, w, th;
 	m_pRobot->calcControl(&v, &w, &th);
 
-	m_ActionDesired.setVel(v * 1000.0);
-	m_ActionDesired.setRotVel(w * 180.0 / M_PI);
-	//m_ActionDesired.setHeading(th * 180.0 / M_PI);
+	if (!pcState->isFollowing /* || // if following is disabled
+							  m_pRobot->isVisualCmdTooOld() */) // or if the visual command is not up-to-date
+	{
+		m_ActionDesired.setVel(0.0);
+		m_ActionDesired.setRotVel(0.0);
+	}
+	else
+	{
+		m_ActionDesired.setVel(v * 1000.0);
+		m_ActionDesired.setRotVel(w * 180.0 / M_PI);
+		//m_ActionDesired.setHeading(th * 180.0 / M_PI);
+	}
+	
 	return &m_ActionDesired;
 	
 }

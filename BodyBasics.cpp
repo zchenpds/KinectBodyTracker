@@ -70,15 +70,7 @@ CBodyBasics::CBodyBasics() :
 	m_pRosPublisher(NULL),
 	m_pConfig(NULL),
 	m_pRobot(NULL),
-	m_pSyncSocket(NULL),
-	// control parameters
-	pzGoal(2.5),
-	pzScale(0.6), 
-	pxScale(0.3),
-	vMax(1.3),
-	vMin(-0.8),
-	wMax(0.6), 
-	wMin(-0.6)
+	m_pSyncSocket(NULL)
 {
     LARGE_INTEGER qpf = {0};
     if (QueryPerformanceFrequency(&qpf))
@@ -100,12 +92,24 @@ CBodyBasics::CBodyBasics() :
 		<< std::setw(2) << timeinfo->tm_sec << ".csv";
 	m_pCsvFile = new std::ofstream(ssFileName.str(), std::ofstream::out); // Open the csv file
 	//*m_pCsvFile << "123" << std::endl; // Test write
+
 	m_pConfig = new Config();
 	m_pSyncSocket = new SyncSocket();
 	m_pRobot = new Robot();
 
 	m_pConfig->load();
 	setParams();
+
+	ZeroMemory(&m_JointData, sizeof(m_JointData));
+	m_JointData.tsWindowsBase = GetTickCount64();
+	int i = 0;
+	for (auto &jt : jointTypeMap)
+	{
+		m_JointData.names[i++] = std::string(jt.second) + "X";
+		m_JointData.names[i++] = std::string(jt.second) + "Y";
+		m_JointData.names[i++] = std::string(jt.second) + "Z";
+	}
+	log(true); //log header
 	
 }
   
@@ -187,7 +191,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 	};
 	
 	ControlProperty CPs[] = { 
-		{&m_hWndButtonFollow, L"Start following", widthButton, heightButton * 8 },
+		{&m_hWndButtonFollow, L"Start following", widthButton, heightButton * 6 },
 		{ &m_hWndButtonOpenConfig, L"Open Config", widthButton, heightButton },
 		{ &m_hWndButtonLoad, L"Load Config", widthButton, heightButton }
 	};
@@ -209,69 +213,6 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 			(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
 			NULL);      // Pointer not needed.;
 	}
-	/*
-	// Button: Start following.
-	m_hWndButtonFollow = CreateWindow(
-		L"BUTTON",  // Predefined class; Unicode assumed 
-		L" Start following",      // Button text 
-		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-		xButton,			// x position 
-		yButton,			// y position 
-		widthButton * 3,		// Button width
-		heightButton * 9,		// Button height
-		hWndApp,    // Parent window
-		NULL,       // No menu.
-		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
-		NULL);      // Pointer not needed.
-	yButton += ySep + heightButton;
-
-	// Button: Open Config.
-	m_hWndButtonOpenConfig = CreateWindow(
-		L"BUTTON",  // Predefined class; Unicode assumed 
-		L"Open Config",      // Button text 
-		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-		xButton,			// x position 
-		yButton,			// y position 
-		widthButton,		// Button width
-		heightButton,		// Button height
-		hWndApp,    // Parent window
-		NULL,       // No menu.
-		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
-		NULL);      // Pointer not needed.
-	yButton += ySep + heightButton;
-
-	// Button: Load.
-	m_hWndButtonLoad = CreateWindow(
-		L"BUTTON",  // Predefined class; Unicode assumed 
-		L"Load Config",      // Button text 
-		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-		xButton,			// x position 
-		yButton,			// y position 
-		widthButton,		// Button width
-		heightButton,		// Button height
-		hWndApp,    // Parent window
-		NULL,       // No menu.
-		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
-		NULL);      // Pointer not needed.
-	yButton += ySep + heightButton;
-
-	// Text field: Load Status.
-	yButton -= ySep / 2;
-	int heightText = 20;
-	m_hWndStaticLoad = CreateWindow(
-		L"STATIC",  // Predefined class; Unicode assumed 
-		L"",        // Field text 
-		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-		xButton,		// x position 
-		yButton,		// y position 
-		widthButton,	// width
-		heightText,		// height
-		hWndApp,    // Parent window
-		NULL,       // No menu.
-		(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
-		NULL);      // Pointer not needed.
-	yButton += ySep / 2 + heightText;
-	*/
 
     // Show window
     ShowWindow(hWndApp, nCmdShow);
@@ -279,17 +220,12 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
     // Main message loop
     while (WM_QUIT != msg.message)
     {
-		INT64 t1 = GetTickCount64();
 		// Odroid Timestamp
 		if (m_pSyncSocket)
-			m_pSyncSocket->receive(t1);
+			m_pSyncSocket->receive();
 
-        Update();
-		//INT64 t2 = GetTickCount64();
-		//WCHAR szStatusMessage[64];
-		//StringCchPrintf(szStatusMessage, _countof(szStatusMessage), L"%d ms", t2 - t1);
-		//SetStatusMessage(szStatusMessage, 500, true);
-
+		Update();
+		
         while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
         {
 			if (WM_QUIT == msg.message) break;
@@ -309,15 +245,24 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
 void CBodyBasics::setParams()
 {
-	m_pConfig->assign("pzGoal", pzGoal);
-	m_pConfig->assign("pzScale", pzScale);
-	m_pConfig->assign("pxScale", pxScale);
-	m_pConfig->assign("vMax", vMax);
-	m_pConfig->assign("vMin", vMin);
-	m_pConfig->assign("wMax", wMax);
-	m_pConfig->assign("wMin", wMin);
-
 	m_pRobot->setParams(m_pConfig);
+}
+
+void CBodyBasics::log(bool bHeader)
+{
+	if (m_pCsvFile == NULL)
+		return;
+	ConditionalLog(m_pCsvFile, "tO", m_pSyncSocket->m_tsOdroid, bHeader);
+	ConditionalLog(m_pCsvFile, "tOW", m_pSyncSocket->m_tsWindows, bHeader);
+	ConditionalLog(m_pCsvFile, "tK", m_JointData.tsKinect, bHeader);
+	ConditionalLog(m_pCsvFile, "tKW", m_JointData.tsWindows, bHeader);
+
+	for (int i = 0; i < JOINT_DATA_SIZE; i++)
+		ConditionalLog(m_pCsvFile, m_JointData.names[i].c_str(), m_JointData.data[i], bHeader);
+	
+	m_pRobot->log(m_pCsvFile, bHeader);
+
+	*m_pCsvFile << '\n';
 }
 
 /// <summary>
@@ -544,7 +489,7 @@ HRESULT CBodyBasics::InitializeDefaultSensor()
 void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 {
 	int iClosest = -1; // the index of the body closest to the camera
-	float dSqrMin = 10.0; // squared x-z-distance of the closest body
+	float dSqrMin = 25.0; // squared x-z-distance of the closest body
 	INT64 t0Windows = GetTickCount64();
 
 
@@ -641,68 +586,47 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 		
 
 		// Process the closest body, if any.
-		float cmd[2];
 		if (iClosest > -1)
 		{
 			Joint joints[JointType_Count];
 			ppBodies[iClosest]->GetJoints(_countof(joints), joints);
 
-			// Publish cmd_vel to ROS
-			float px = joints[JointType_SpineBase].Position.X;
-			float py = joints[JointType_SpineBase].Position.Y;
-			float pz = joints[JointType_SpineBase].Position.Z;
-
-			m_pRobot->updateVisualCmd(px, pz);
-			
-			/*
-			// Linear velocity
-			cmd[0] = (pz - pzGoal) * pzScale;
-			cmd[0] = max(min(cmd[0], vMax), vMin);
-			// Angular velocity
-			cmd[1] = px * pxScale;
-			cmd[1] = max(min(cmd[1], wMax), wMin);
-			*/
-
-
-			// Write time info to a csv file
-			int jointTypeList[] = { JointType_KneeLeft, JointType_AnkleLeft, JointType_FootLeft,
-				JointType_KneeRight, JointType_AnkleRight, JointType_FootRight };
-			*m_pCsvFile << (nTime - m_nStartTime) / 10000 << ","; // Kinect timestamp in mSecs
-			*m_pCsvFile << m_pSyncSocket->m_tsOdroid << ","; // Odroid timestamp in uSecs
-			if (m_pSyncSocket->m_tsWindows < 0)
-				*m_pCsvFile << -1 << ","; // No sync packet has been received
-			else
+			float pxSum = 0, pzSum = 0;
+			int cnt = 0;
+			for (int j = 0; j < JointType_Count; j++)
 			{
-				// How many mSecs ago was the last Odroid timestamp received
-				INT64 tsDiff = t0Windows - m_pSyncSocket->m_tsWindows; 
-				*m_pCsvFile << tsDiff << ",";
+				if (joints[j].TrackingState == TrackingState_Tracked)
+				{
+					float px = joints[j].Position.X;
+					//float py = joints[JointType_SpineBase].Position.Y;
+					float pz = joints[j].Position.Z;
+
+					pxSum += px;
+					pzSum += pz;
+					cnt++;
+				}
+			}
+			
+			m_pRobot->updateVisualCmd(pxSum/cnt, pzSum/cnt);
+			
+			// Get data ready for recording
+			m_JointData.tsWindows = GetTickCount64(); // For now not to be logged.
+			m_JointData.tsKinect = (nTime - m_nStartTime) / 10000;
+			// Write joint states to the struct
+			int i = 0;
+			for (auto const &jt : jointTypeMap)
+			{
+				m_JointData.data[i++] = joints[jt.first].Position.X;
+				m_JointData.data[i++] = joints[jt.first].Position.Y;
+				m_JointData.data[i++] = joints[jt.first].Position.Z;
 			}
 
-			// Write joint states to a csv file
-			for (auto &jt : jointTypeList)
-				*m_pCsvFile << joints[jt].Position.X << ","
-				<< joints[jt].Position.Y << ","
-				<< joints[jt].Position.Z << ",";
-			
-			// Write robot states to a csv file
-			//m_pRobot->updateState(); // This has been moved to ActionFollow
-			pcRobotState pcState = m_pRobot->getState();
-			if (pcState->tsWindows == 0)
-				*m_pCsvFile << -1 << ","; // No robot packet has been received
-			else
-			{
-				// How many mSecs ago was the last robot packet received
-				*m_pCsvFile << t0Windows - pcState->tsWindows << ",";
-			}
-			float * afState = (float *)pcState;
-			for (int i = 0; i < 5; i++)
-				*m_pCsvFile << afState[i] << ",";
-			*m_pCsvFile << "\n";
+			// Record data
+			log();
+				
 		}
 		else
 		{
-			cmd[0] = 0.0;
-			cmd[1] = 0.0;
 			//m_pRobot->setCmd(cmd[0], cmd[1]); // debug
 		}
 

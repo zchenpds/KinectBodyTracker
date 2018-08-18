@@ -12,6 +12,24 @@
 #include "SyncSocket.h"
 #include "robot.h"
 
+const std::map <JointType, const char * > jointTypeMap = {
+	{JointType_KneeLeft, "kneeL"}, 
+	{JointType_AnkleLeft, "ankleL"},
+	{JointType_FootLeft, "footL"},
+	{JointType_KneeRight, "kneeR"},
+	{JointType_AnkleRight, "ankleR"}, 
+	{JointType_FootRight, "footR"} };
+
+const int JOINT_DATA_SIZE = 6*3;
+
+typedef struct JointData_ {
+	float		data[JOINT_DATA_SIZE];
+	std::string	names[JOINT_DATA_SIZE];
+	INT64		tsKinect;	// (nTime - m_nStartTime) / 10000
+	INT64		tsWindows;	// GetTickCount64()
+	INT64		tsWindowsBase;
+} JointData;
+
 void ErrorExit(LPTSTR lpszFunction)
 {
 	// Retrieve the system error message for the last-error code
@@ -117,8 +135,9 @@ private:
     ID2D1SolidColorBrush*   m_pBrushHandLasso;
 
 	//
-	SyncSocket*             m_pSyncSocket;
-	Robot*                  m_pRobot;
+	SyncSocket*				m_pSyncSocket;
+	Robot*					m_pRobot;
+	JointData				m_JointData;
 
 	// Interface
 	HWND					m_hWndButtonFollow;
@@ -127,16 +146,13 @@ private:
 	HWND                    m_hWndStaticLoad;
 
 	// ROS Publisher
-	RosPublisher*           m_pRosPublisher;
-	std::ofstream*          m_pCsvFile;
-	Config*                 m_pConfig;
+	RosPublisher*			m_pRosPublisher;
+	std::ofstream*			m_pCsvFile;
+	Config*					m_pConfig;
 
-	// Control parameters
-	float                   pzGoal, 
-		                    pzScale, pxScale, 
-		                    vMax, vMin, wMax, wMin;
-
+	//
 	void                    setParams();
+	void					log(bool bHeader = false);
 
     /// <summary>
     /// Main processing function

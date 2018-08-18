@@ -53,3 +53,12 @@ inline void SafeRelease(Interface *& pInterfaceToRelease)
         pInterfaceToRelease = NULL;
     }
 }
+
+
+// For data logging
+template<class T>
+inline void ConditionalLog(std::ofstream * pOfs, char const * name, const T & value, bool bHeader)
+{
+	if (bHeader) *pOfs << name << ',';
+	else *pOfs << value << ',';
+}

@@ -2,7 +2,8 @@
 #include "Aria.h"
 #include "Config.h"
 #include "ActionFollow.h"
-
+#include <fstream>
+#include "stdafx.h"
 
 
 class ActionFollow;
@@ -40,6 +41,11 @@ typedef struct ControlParams_ {
 	float			wScale;
 } ControlParams, *pControlParams;
 
+typedef struct ControlCmd_ {
+	float			v;
+	float			w;
+} ControlCmd;
+
 class Robot
 {
 protected:
@@ -52,6 +58,7 @@ protected:
 	RobotState                  m_State;
 	VisualCmd					m_VisualCmd; // not initalized
 	ControlParams				m_Params; // not initialized
+	ControlCmd					m_ControlCmd;
 	ActionFollow*				m_pActionFollow;
 	ArActionLimiterForwards*    m_pActionLimiterForwards;
 	HWND						m_hWnd;
@@ -61,6 +68,7 @@ public:
 	~Robot();
 	bool init(HWND hWnd);
 	void setParams(Config * pConfig);
+	void log(std::ofstream * pOfs, bool bHeader = false);
 	void updateState();
 	pcRobotState getState();
 	void setCmd(float v, float w); // For now not in use
