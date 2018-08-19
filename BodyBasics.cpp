@@ -185,15 +185,18 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
 	struct ControlProperty {
 		HWND * phWnd;
+		LPCWSTR className;
 		LPCWSTR text;
 		int w; 
 		int h;
 	};
 	
 	ControlProperty CPs[] = { 
-		{&m_hWndButtonFollow, L"Start following", widthButton, heightButton * 6 },
-		{ &m_hWndButtonOpenConfig, L"Open Config", widthButton, heightButton },
-		{ &m_hWndButtonLoad, L"Load Config", widthButton, heightButton }
+		{ &m_hWndButtonFollow, L"BUTTON", L"Start following", widthButton, heightButton * 5 },
+		{ &m_hWndButtonCalibrate, L"BUTTON", L"Calibrate", widthButton, heightButton },
+		{ &m_hWndButtonOpenConfig, L"BUTTON", L"Open Config", widthButton, heightButton },
+		{ &m_hWndButtonLoad, L"BUTTON", L"Load Config", widthButton, heightButton },
+		{ &m_hWndStaticLoad, L"STATIC", L"", widthButton, heightButton/2 }
 	};
 
 	for (int i = 0, x = xButton, y = yButton;
@@ -201,7 +204,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		y += CPs[i].h + ySep, i++)
 	{
 		*(CPs[i].phWnd) = CreateWindow(
-			L"BUTTON",  // Predefined class; Unicode assumed 
+			CPs[i].className,  // Predefined class; Unicode assumed 
 			CPs[i].text,      // Button text 
 			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
 			x,			// x position 
@@ -428,6 +431,10 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 						SetWindowText(m_hWndButtonFollow, L" Start Following");
 					}
 					
+				}
+				else if (m_hWndButtonCalibrate == hButton)
+				{
+
 				}
 				else if (m_hWndButtonOpenConfig == hButton)
 				{

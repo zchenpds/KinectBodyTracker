@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BodyBasics-D2D", "BodyBasics-D2D.vcxproj", "{6E5E35A2-7A3B-4671-AD85-B39DC5D710C9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BodyTracker", "BodyTracker.vcxproj", "{6E5E35A2-7A3B-4671-AD85-B39DC5D710C9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

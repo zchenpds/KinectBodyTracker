@@ -141,6 +141,7 @@ private:
 
 	// Interface
 	HWND					m_hWndButtonFollow;
+	HWND					m_hWndButtonCalibrate;
 	HWND					m_hWndButtonOpenConfig;
 	HWND					m_hWndButtonLoad;
 	HWND                    m_hWndStaticLoad;
