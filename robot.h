@@ -5,8 +5,8 @@
 #include <fstream>
 #include "stdafx.h"
 
-//#define ROBOT_USE_ACTIONS
-#define ROBOT_USE_MOTION_COMMAND_FUNCTIONS
+#define ROBOT_USE_ACTIONS
+//#define ROBOT_USE_MOTION_COMMAND_FUNCTIONS
 
 class ActionFollow;
 
@@ -53,6 +53,7 @@ class Robot
 protected:
 	//Aria stuff
 	ArRobot*                    m_pArRobot;
+	ArSonarDevice*				m_pSonar;
 	ArRobotConnector*           m_pRobotConn;
 	ArArgumentBuilder*          m_pArgs;
 	ArArgumentParser*           m_pParser;

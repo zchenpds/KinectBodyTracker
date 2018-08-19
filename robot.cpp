@@ -40,6 +40,7 @@ Robot::Robot():
 	// Central object that is an interface to the robot and its integrated
 	// devices, and which manages control of the robot by the rest of the program.
 	m_pArRobot = new ArRobot();
+	m_pSonar = new ArSonarDevice();
 
 	// Object that connects to the robot or simulator using program options
 	m_pRobotConn = new ArRobotConnector(m_pParser, m_pArRobot);
@@ -54,6 +55,7 @@ Robot::~Robot()
 	m_pArRobot->disableMotors();
 	Aria::exit(1);
 	delete m_pRobotConn;
+	delete m_pSonar;
 	delete m_pArRobot;
 	delete m_pArgs;
 	delete m_pParser;
@@ -111,18 +113,19 @@ bool Robot::init(HWND hWnd)
 	}
 
 	// Used to access and process sonar range data
-	ArSonarDevice sonarDev;
+	//ArSonarDevice sonarDev;
 
 
 	// Attach sonarDev to the robot so it gets data from it.
-	m_pArRobot->addRangeDevice(&sonarDev);
+	m_pArRobot->addRangeDevice(m_pSonar);
 
 
 #ifdef ROBOT_USE_ACTIONS
 	m_pArRobot->addAction(m_pActionFollow, 50);
+	m_pArRobot->addAction(m_pActionLimiterForwards, 40);
 #endif // ROBOT_USE_ACTIONS
 
-	//m_pArRobot->addAction(m_pActionLimiterForwards, 40);
+	
 
 	m_pArRobot->enableMotors();
 
