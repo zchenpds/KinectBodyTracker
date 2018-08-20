@@ -1,7 +1,9 @@
-Debug
-Release
+/Debug/*
+!/Debug/AriaDebugVC15.dll
+/Release/*
+!/Release/AriaVC15.dll
 .vs
 *.aps
 *.csv
-/docs
+/docs/*
 *.user
