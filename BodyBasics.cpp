@@ -70,7 +70,7 @@ CBodyBasics::CBodyBasics() :
 	m_pRosPublisher(NULL),
 	m_pConfig(NULL),
 	m_pRobot(NULL),
-	m_pCalibFile(NULL),
+	m_pCalibKinectFile(NULL),
 	m_pSyncSocket(NULL)
 {
     LARGE_INTEGER qpf = {0};
@@ -120,11 +120,11 @@ CBodyBasics::~CBodyBasics()
 	m_pKinectFile->close();
 	delete m_pKinectFile;
 
-	if (m_pCalibFile)
+	if (m_pCalibKinectFile)
 	{
-		m_pCalibFile->close();
-		delete m_pCalibFile;
-		m_pCalibFile = NULL;
+		m_pCalibKinectFile->close();
+		delete m_pCalibKinectFile;
+		m_pCalibKinectFile = NULL;
 	}
 		
 
@@ -336,9 +336,12 @@ void CBodyBasics::calibrate()
 	static INT64 nTimeoutTick;
 	INT64 nCurrentTick = GetTickCount64();
 	if (s_State != Inactive)
-		log(m_pCalibFile);
-
-	
+	{
+		if (m_pCalibKinectFile)
+			log(m_pCalibKinectFile);
+		else
+			s_State = Aborted;
+	}
 
 	switch (s_State)
 	{
@@ -346,12 +349,16 @@ void CBodyBasics::calibrate()
 	{
 		if (m_pRobot->getState()->isCalibrating)
 		{
-			// Start Calibration
-			std::string fileName;
-			generateFileName(fileName, "calib");
-			m_pCalibFile = new std::ofstream(fileName, std::ofstream::out); // Open the calib file for writing
-			log(m_pCalibFile, true);
+			// --- Start Calibration ---
+
+			// Create calib-Kinect file
+			std::string fileNameKinect;
+			generateFileName(fileNameKinect, "calib-Kinect");
+			m_pCalibKinectFile = new std::ofstream(fileNameKinect, std::ofstream::out); // Open a calib file for writing
+			log(m_pCalibKinectFile, true);
 			
+			m_pRobot->setCalibRobotLogging(true);
+
 			// Let the robot stand still
 			m_pRobot->updateControlParams(m0.params);
 
@@ -376,7 +383,7 @@ void CBodyBasics::calibrate()
 		// State transition
 		if (nCurrentTick >= nTimeoutTick)
 		{
-			nTimeoutTick = nCurrentTick + 100000; // set timeout tick for Act1
+			nTimeoutTick = nCurrentTick + 150000; // set timeout tick for Act1
 			s_State = Act1;
 			iMove = -1;
 
@@ -389,7 +396,8 @@ void CBodyBasics::calibrate()
 	case Act1:
 	{
 		static INT64 nMoveUntilTick;
-		const MoveSequence Moves = {&m1, &m2, &m1, &m2 };
+		const MoveSequence Moves = {&m1, &m2};
+		const int nReps = 10;
 
 		// Move initialization
 		if (iMove == -1)
@@ -399,7 +407,7 @@ void CBodyBasics::calibrate()
 		}
 		
 		// Execute the move
-		m_pRobot->updateControlParams(Moves[iMove]->params);
+		m_pRobot->updateControlParams(Moves[iMove%nReps]->params);
 
 		// Update status message
 		const int nMaxCount = 256;
@@ -408,7 +416,7 @@ void CBodyBasics::calibrate()
 			"\n\tMove%d out of %d Moves in progress" \
 			"\n\t\tending in %.0f seconds." \
 			"\nTiming out in %.0f seconds",
-			iMove, Moves.size(), ceil((nMoveUntilTick - nCurrentTick) / 1000.0),
+			iMove, Moves.size()*nReps, ceil((nMoveUntilTick - nCurrentTick) / 1000.0),
 			ceil((nTimeoutTick - nCurrentTick) / 1000.0) );
 		GetWindowText(m_hWndStatic, pszPrevText, nMaxCount);
 		if (wcscmp(pszText, pszPrevText))
@@ -417,12 +425,12 @@ void CBodyBasics::calibrate()
 		// Move transition
 		if (nCurrentTick >= nMoveUntilTick)
 		{
-			nMoveUntilTick = nCurrentTick + Moves[iMove]->duration;
+			nMoveUntilTick = nCurrentTick + Moves[iMove%nReps]->duration;
 			iMove++;
 		}
 
 		// State transition
-		if (iMove >= Moves.size() || nCurrentTick >= nTimeoutTick)
+		if (iMove >= Moves.size() * nReps || nCurrentTick >= nTimeoutTick)
 		{
 			iMove = -1;
 			nTimeoutTick += 3000;
@@ -437,9 +445,14 @@ void CBodyBasics::calibrate()
 	case Aborted:
 	{
 		// Close file
-		m_pCalibFile->close();
-		delete m_pCalibFile;
-		m_pCalibFile = NULL;
+		if (m_pCalibKinectFile)
+		{
+			m_pCalibKinectFile->close();
+			delete m_pCalibKinectFile;
+			m_pCalibKinectFile = NULL;
+		}
+
+		m_pRobot->setCalibRobotLogging(false);
 
 		// Update status message
 		if (s_State == Completed)

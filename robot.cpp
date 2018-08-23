@@ -9,7 +9,8 @@ Robot::Robot():
 	m_pParser(NULL),
 	m_pActionFollow(NULL),
 	m_pActionLimiterForwards(NULL),
-	m_hWnd(NULL)
+	m_hWnd(NULL),
+	m_pCalibRobotFile(NULL)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
 	m_State.isFollowing = false;
@@ -213,6 +214,8 @@ void Robot::updateState() // To do: add mutex.
 	m_State.yVm = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);
 
 	log(m_pRobotFile);
+	if (m_pCalibRobotFile)
+		log(m_pCalibRobotFile);
 	//m_pArRobot->unlock();
 }
 
@@ -321,6 +324,32 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 	*pTh = atan2(yToGoal, xToGoal);
 
 	//m_pArRobot->unlock();
+}
+
+void Robot::setCalibRobotLogging(bool bCalib)
+{
+	if (bCalib)
+	{
+		// Create calib-Robot file
+		if (!m_pCalibRobotFile)
+		{
+			std::string fileNameRobot;
+			generateFileName(fileNameRobot, "calib-Robot");
+			m_pCalibRobotFile = new std::ofstream(fileNameRobot, std::ofstream::out); // Open a calib file for writing
+			log(m_pCalibRobotFile, true);
+		}
+	}
+	else
+	{
+		// Release calib-Robot file
+		if (m_pCalibRobotFile)
+		{
+			m_pCalibRobotFile->close();
+			delete m_pCalibRobotFile;
+			m_pCalibRobotFile = NULL;
+		}
+	}
+	
 }
 
 

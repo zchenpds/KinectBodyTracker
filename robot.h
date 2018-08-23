@@ -59,6 +59,7 @@ protected:
 	ArArgumentParser*           m_pParser;
 	// My stuff
 	std::ofstream*				m_pRobotFile;
+	std::ofstream*				m_pCalibRobotFile;
 	RobotState                  m_State;
 	VisualCmd					m_VisualCmd; // not initalized
 	ControlParams				m_Params; // not initialized
@@ -90,6 +91,8 @@ public:
 
 	bool isVisualCmdTooOld();
 	void calcControl(float * pV, float * pW, float * pTh);
+
+	void setCalibRobotLogging(bool bCalib);
 	
 };
 

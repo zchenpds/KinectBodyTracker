@@ -152,7 +152,7 @@ private:
 	// ROS Publisher
 	RosPublisher*			m_pRosPublisher;
 	std::ofstream*			m_pKinectFile;
-	std::ofstream*			m_pCalibFile;
+	std::ofstream*			m_pCalibKinectFile;
 	Config*					m_pConfig;
 
 	//
