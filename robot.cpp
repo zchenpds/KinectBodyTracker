@@ -171,6 +171,7 @@ void Robot::log(std::ofstream * pOfs, bool bHeader)
 	if (pOfs == NULL)
 		return;
 	
+	ConditionalLog(pOfs, "tR", m_State.tsRobot, bHeader);
 	ConditionalLog(pOfs, "tRW", m_State.tsWindows, bHeader);
 	ConditionalLog(pOfs, "x", m_State.x, bHeader);
 	ConditionalLog(pOfs, "y", m_State.y, bHeader);
@@ -209,6 +210,9 @@ void Robot::updateState() // To do: add mutex.
 	m_State.batteryVolt = m_pArRobot->getRealBatteryVoltageNow();
 	m_State.areMotorsEnabled = m_pArRobot->areMotorsEnabled();
 	m_State.tsWindows = GetTickCount64();
+
+	ArTime Time = m_pArRobot->getLastOdometryTime();
+	m_State.tsRobot = Time.getSecLL() * 1000ll + Time.getMSecLL();
 
 	m_State.xVm = m_State.x + m_Params.VmDistance * cos(m_State.th + m_Params.VmHeading);
 	m_State.yVm = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);

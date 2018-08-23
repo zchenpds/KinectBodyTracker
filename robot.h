@@ -23,6 +23,8 @@ typedef struct RobotState_ {
 	float			yVm; // Virtual marker's y position in World frame
 
 	INT64			tsWindows; // return of GetTickCount64()
+	INT64			tsRobot; // return of ArRobot::getLastOdometryTime() in milliseconds
+
 	bool			isFollowing;
 	bool			isCalibrating;
 	//ArMutex			mutex;

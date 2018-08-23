@@ -47,6 +47,7 @@ git clone --recurse-submodule https://github.com/zchenpds/KinectBodyTracker
 1.	footRX	:	Right foot x coordinate (meters, relative to Camera frame)
 1.	footRY	:	Right foot y coordinate (meters, relative to Camera frame)
 1.	footRZ	:	Right foot z coordinate (meters, relative to Camera frame)
+1.	tR	:	Windows timestamp at which the last SIP packet was received.
 1.	tRW	:	Windows timestamp asscociated with the last Robot state update.
 1.	x	:	Robot x coordinate (meters, relative to initial pose, aka World frame)
 1.	y	:	Robot y coordinate (meters, relative to initial pose, aka World frame)
