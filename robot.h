@@ -24,7 +24,7 @@ typedef struct RobotState_ {
 
 	INT64			tsWindows; // return of GetTickCount64()
 	bool			isFollowing;
-
+	bool			isCalibrating;
 	//ArMutex			mutex;
 } RobotState;
 typedef const RobotState *pcRobotState;
@@ -58,6 +58,7 @@ protected:
 	ArArgumentBuilder*          m_pArgs;
 	ArArgumentParser*           m_pParser;
 	// My stuff
+	std::ofstream*				m_pRobotFile;
 	RobotState                  m_State;
 	VisualCmd					m_VisualCmd; // not initalized
 	ControlParams				m_Params; // not initialized
@@ -74,17 +75,24 @@ public:
 	void log(std::ofstream * pOfs, bool bHeader = false);
 	void updateState();
 	pcRobotState getState();
-	void setCmd(float v, float w); // For now not in use
-	void startFollowing();
-	void stopFollowing();
+	void setCmd(float v, float w);
 
-	// Kinect data processing thread invokes these overloaded functions
+	bool toggleFollowing();
+	bool toggleCalibration();
+
+	// Kinect data processing thread invokes these functions
 	/* 1. Pass the position of the subject's spine base: 
 	/ - x: lateral displacement in Camera frame;
 	/ - z: longitudinal displacement in Camera frame. */
 	void updateVisualCmd(float x, float z);
-	bool isVisualCmdTooOld();
+	void updateControlParams(float VmDistance, float VmHeading, float vScale, float wScale);
+	void updateControlParams(const float * params);
 
+	bool isVisualCmdTooOld();
 	void calcControl(float * pV, float * pW, float * pTh);
 	
 };
+
+
+#include <iomanip>
+void generateFileName(std::string & dest, const char * suffix = "");

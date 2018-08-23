@@ -29,17 +29,16 @@ ArActionDesired *ActionFollow::fire(ArActionDesired currentDesired)
 	float v, w, th;
 	m_pRobot->calcControl(&v, &w, &th);
 
-	if (!pcState->isFollowing /* || // if following is disabled
-							  m_pRobot->isVisualCmdTooOld() */) // or if the visual command is not up-to-date
-	{
-		m_ActionDesired.setVel(0.0);
-		m_ActionDesired.setRotVel(0.0);
-	}
-	else
+	if (pcState->isFollowing || pcState->isCalibrating)
 	{
 		m_ActionDesired.setVel(v * 1000.0);
 		m_ActionDesired.setRotVel(w * 180.0 / M_PI);
 		//m_ActionDesired.setHeading(th * 180.0 / M_PI);
+	}
+	else
+	{
+		m_ActionDesired.setVel(0.0);
+		m_ActionDesired.setRotVel(0.0);
 	}
 	
 	return &m_ActionDesired;

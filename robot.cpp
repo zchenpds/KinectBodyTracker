@@ -13,12 +13,17 @@ Robot::Robot():
 {
 	ZeroMemory(&m_State, sizeof(m_State));
 	m_State.isFollowing = false;
+	m_State.isCalibrating = false;
 	m_State.tsWindows = -1;
 
 	m_Params.VmDistance = 2.5;
 	m_Params.VmHeading = 0;
 	m_Params.vScale = 1.2;
 	m_Params.wScale = 0.3;
+
+	float theta = m_State.th + m_Params.VmHeading;
+	m_VisualCmd.xVmGoal = m_State.x + m_Params.VmDistance * cos(theta);
+	m_VisualCmd.yVmGoal = m_State.y;
 
 	m_ControlCmd.v = 0.0;
 	m_ControlCmd.w = 0.0;
@@ -47,6 +52,12 @@ Robot::Robot():
 
 	m_pActionFollow = new ActionFollow(this);
 	m_pActionLimiterForwards = new ArActionLimiterForwards();
+
+	// Open a csv file
+	std::string fileNameRobot;
+	generateFileName(fileNameRobot, "Robot");
+	m_pRobotFile = new std::ofstream(fileNameRobot, std::ofstream::out); // Open the csv file
+	log(m_pRobotFile, true);
 }
 
 
@@ -61,6 +72,9 @@ Robot::~Robot()
 	delete m_pParser;
 	delete m_pActionFollow;
 	delete m_pActionLimiterForwards;
+	m_pRobotFile->close();
+	delete m_pRobotFile;
+	
 }
 
 bool Robot::init(HWND hWnd)
@@ -140,6 +154,11 @@ void Robot::setParams(Config * pConfig)
 	pConfig->assign("VmHeading", m_Params.VmHeading);
 	pConfig->assign("vScale", m_Params.vScale);
 	pConfig->assign("wScale", m_Params.wScale);
+
+	std::string StrRobotPort;
+	pConfig->assign("robotPort", StrRobotPort);
+	m_pArgs->add("-robotPort %s", StrRobotPort.c_str());
+
 	m_pActionFollow->setParams(pConfig);
 }
 
@@ -165,8 +184,11 @@ void Robot::log(std::ofstream * pOfs, bool bHeader)
 	ConditionalLog(pOfs, "yVmG", m_VisualCmd.yVmGoal, bHeader);
 	ConditionalLog(pOfs, "vD", m_ControlCmd.v, bHeader);
 	ConditionalLog(pOfs, "wD", m_ControlCmd.w, bHeader);
-	
-
+	ConditionalLog(pOfs, "dVmG", m_Params.VmDistance, bHeader);
+	ConditionalLog(pOfs, "hVmG", m_Params.VmHeading, bHeader);
+	ConditionalLog(pOfs, "vScale", m_Params.vScale, bHeader);
+	ConditionalLog(pOfs, "wScale", m_Params.wScale, bHeader);
+	*pOfs << '\n';
 	//m_pArRobot->unlock();
 }
 
@@ -190,7 +212,7 @@ void Robot::updateState() // To do: add mutex.
 	m_State.xVm = m_State.x + m_Params.VmDistance * cos(m_State.th + m_Params.VmHeading);
 	m_State.yVm = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);
 
-
+	log(m_pRobotFile);
 	//m_pArRobot->unlock();
 }
 
@@ -211,14 +233,32 @@ void Robot::setCmd(float v, float w)
 	m_pArRobot->unlock();
 }
 
-void Robot::startFollowing()
+bool Robot::toggleFollowing()
 {
-	m_State.isFollowing = true;
+	if (!m_State.isCalibrating)
+	{
+		if (!m_State.isFollowing)
+			m_State.isFollowing = true;
+		else
+			m_State.isFollowing = false;
+		return true; // succeeded
+	}
+	else
+		return false; // failed
 }
 
-void Robot::stopFollowing()
+bool Robot::toggleCalibration()
 {
-	m_State.isFollowing = false;
+	if (!m_State.isFollowing)
+	{
+		if (!m_State.isCalibrating)
+			m_State.isCalibrating = true;
+		else
+			m_State.isCalibrating = false;
+		return true; // succeeded
+	}
+	else
+		return false; // failed
 }
 
 void Robot::updateVisualCmd(float x, float z)
@@ -236,6 +276,19 @@ void Robot::updateVisualCmd(float x, float z)
 	}
 
 	//m_pArRobot->unlock();
+}
+
+void Robot::updateControlParams(float VmDistance, float VmHeading, float vScale, float wScale)
+{
+	m_Params.VmDistance = VmDistance;
+	m_Params.VmHeading = VmHeading;
+	m_Params.vScale = vScale;
+	m_Params.wScale = wScale;
+}
+
+void Robot::updateControlParams(const float * params)
+{
+	updateControlParams(params[0], params[1], params[2], params[3]);
 }
 
 bool Robot::isVisualCmdTooOld()
@@ -270,3 +323,29 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 	//m_pArRobot->unlock();
 }
 
+
+
+
+void generateFileName(std::string & dest, const char * suffix)
+{
+	std::string strSuffix(suffix);
+	static std::map<std::string, int> MapCounter;
+	if (MapCounter.find(strSuffix) == MapCounter.end())
+		MapCounter[strSuffix] = 0;
+	else
+		MapCounter[strSuffix]++;
+
+	time_t rawtime; // the number of seconds elapsed since 1900 at 00:00 UTC
+	time(&rawtime); // obtain current time
+	struct tm *timeinfo = localtime(&rawtime); // represent current time using struct
+	std::stringstream ssFileName; // Construct the name of the csv file
+	ssFileName << "data-"
+		<< timeinfo->tm_year + 1900 << std::setfill('0')
+		<< std::setw(2) << timeinfo->tm_mon + 1
+		<< std::setw(2) << timeinfo->tm_mday << "-"
+		<< std::setw(2) << timeinfo->tm_hour << "-"
+		<< std::setw(2) << timeinfo->tm_min << "-"
+		<< std::setw(2) << timeinfo->tm_sec << "-"
+		<< suffix << MapCounter[strSuffix] << ".csv";
+	dest = ssFileName.str();
+}

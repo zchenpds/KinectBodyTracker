@@ -63,6 +63,9 @@ void ErrorExit(LPTSTR lpszFunction)
 	ExitProcess(dw);
 }
 
+//void generateFileName(std::string & dest, const char * suffix = "");
+
+
 class CBodyBasics
 {
     static const int        cDepthWidth  = 512;
@@ -144,18 +147,23 @@ private:
 	HWND					m_hWndButtonCalibrate;
 	HWND					m_hWndButtonOpenConfig;
 	HWND					m_hWndButtonLoad;
-	HWND                    m_hWndStaticLoad;
+	HWND                    m_hWndStatic;
 
 	// ROS Publisher
 	RosPublisher*			m_pRosPublisher;
-	std::ofstream*			m_pCsvFile;
+	std::ofstream*			m_pKinectFile;
+	std::ofstream*			m_pCalibFile;
 	Config*					m_pConfig;
 
 	//
 	void                    setParams();
-	void					log(bool bHeader = false);
+	void					log(std::ofstream * pOfs, bool bHeader = false);
 	void					control();
+	void					calibrate();
 
+	inline void				onPressingButtonFollow();
+	inline void				onPressingButtonCalibrate();
+	inline void				updateButtons();
     /// <summary>
     /// Main processing function
     /// </summary>

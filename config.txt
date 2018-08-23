@@ -1,5 +1,7 @@
 ros_master=192.168.1.15:11411
 
+robotPort=COM4
+
 VmDistance=2.8
 VmHeading=3.1415927
 vScale=-1.0

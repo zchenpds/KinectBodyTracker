@@ -70,6 +70,7 @@ CBodyBasics::CBodyBasics() :
 	m_pRosPublisher(NULL),
 	m_pConfig(NULL),
 	m_pRobot(NULL),
+	m_pCalibFile(NULL),
 	m_pSyncSocket(NULL)
 {
     LARGE_INTEGER qpf = {0};
@@ -79,19 +80,11 @@ CBodyBasics::CBodyBasics() :
     }
 
 	// Open a csv file
-	time_t rawtime; // the number of seconds elapsed since 1900 at 00:00 UTC
-	time(&rawtime); // obtain current time
-	struct tm *timeinfo = localtime(&rawtime); // represent current time using struct
-	std::stringstream ssFileName; // Construct the name of the csv file
-	ssFileName << "data-"
-		<< timeinfo->tm_year + 1900 << std::setfill('0')
-		<< std::setw(2) << timeinfo->tm_mon
-		<< std::setw(2) << timeinfo->tm_mday << "-"
-		<< std::setw(2) << timeinfo->tm_hour << "-"
-		<< std::setw(2) << timeinfo->tm_min << "-"
-		<< std::setw(2) << timeinfo->tm_sec << ".csv";
-	m_pCsvFile = new std::ofstream(ssFileName.str(), std::ofstream::out); // Open the csv file
-	//*m_pCsvFile << "123" << std::endl; // Test write
+	std::string fileNameKinect;
+	generateFileName(fileNameKinect, "Kinect");
+	m_pKinectFile = new std::ofstream(fileNameKinect, std::ofstream::out); // Open the csv file
+	
+	//*m_pKinectFile << "123" << std::endl; // Test write
 
 	m_pConfig = new Config();
 	m_pSyncSocket = new SyncSocket();
@@ -109,7 +102,7 @@ CBodyBasics::CBodyBasics() :
 		m_JointData.names[i++] = std::string(jt.second) + "Y";
 		m_JointData.names[i++] = std::string(jt.second) + "Z";
 	}
-	log(true); //log header
+	log(m_pKinectFile, true); //log header
 	
 }
   
@@ -123,8 +116,18 @@ CBodyBasics::~CBodyBasics()
 	delete m_pSyncSocket;
 	delete m_pConfig;
 	//delete m_pRosPublisher;
-	m_pCsvFile->close();
-	delete m_pCsvFile;
+
+	m_pKinectFile->close();
+	delete m_pKinectFile;
+
+	if (m_pCalibFile)
+	{
+		m_pCalibFile->close();
+		delete m_pCalibFile;
+		m_pCalibFile = NULL;
+	}
+		
+
     DiscardDirect2DResources();
 
     // clean up Direct2D
@@ -187,16 +190,26 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		HWND * phWnd;
 		LPCWSTR className;
 		LPCWSTR text;
+		DWORD dwStyle;
 		int w; 
 		int h;
 	};
 	
 	ControlProperty CPs[] = { 
-		{ &m_hWndButtonFollow, L"BUTTON", L"Start following", widthButton, heightButton * 5 },
-		{ &m_hWndButtonCalibrate, L"BUTTON", L"Calibrate", widthButton, heightButton },
-		{ &m_hWndButtonOpenConfig, L"BUTTON", L"Open Config", widthButton, heightButton },
-		{ &m_hWndButtonLoad, L"BUTTON", L"Load Config", widthButton, heightButton },
-		{ &m_hWndStaticLoad, L"STATIC", L"", widthButton, heightButton/2 }
+		{ &m_hWndButtonFollow, L"BUTTON", L"Start following",
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton * 5 },
+
+		{ &m_hWndButtonCalibrate, L"BUTTON", L"Start Calibration",
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
+
+		{ &m_hWndButtonOpenConfig, L"BUTTON", L"Open Config", 
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
+
+		{ &m_hWndButtonLoad, L"BUTTON", L"Load Config", 
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
+
+		{ &m_hWndStatic, L"STATIC", L"", 
+		WS_VISIBLE | WS_CHILD, widthButton, heightButton*2 }
 	};
 
 	for (int i = 0, x = xButton, y = yButton;
@@ -206,7 +219,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		*(CPs[i].phWnd) = CreateWindow(
 			CPs[i].className,  // Predefined class; Unicode assumed 
 			CPs[i].text,      // Button text 
-			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
+			CPs[i].dwStyle,  // Styles 
 			x,			// x position 
 			y,			// y position 
 			CPs[i].w,		// Button width
@@ -216,6 +229,10 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 			(HINSTANCE)GetWindowLong(hWndApp, GWL_HINSTANCE),
 			NULL);      // Pointer not needed.;
 	}
+
+	// Register hotkeys
+	RegisterHotKey(hWndApp, 1, MOD_CONTROL | MOD_NOREPEAT, 'F');
+	RegisterHotKey(hWndApp, 2, MOD_CONTROL | MOD_NOREPEAT, 'C');
 
     // Show window
     ShowWindow(hWndApp, nCmdShow);
@@ -231,6 +248,8 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 #ifdef ROBOT_USE_MOTION_COMMAND_FUNCTIONS
 		control();
 #endif // ROBOT_USE_MOTION_COMMAND_ACTIONS
+
+		//calibrate();
 
         while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
         {
@@ -254,21 +273,19 @@ void CBodyBasics::setParams()
 	m_pRobot->setParams(m_pConfig);
 }
 
-void CBodyBasics::log(bool bHeader)
+void CBodyBasics::log(std::ofstream * pOfs, bool bHeader)
 {
-	if (m_pCsvFile == NULL)
+	if (pOfs == NULL)
 		return;
-	ConditionalLog(m_pCsvFile, "tO", m_pSyncSocket->m_tsOdroid, bHeader);
-	ConditionalLog(m_pCsvFile, "tOW", m_pSyncSocket->m_tsWindows, bHeader);
-	ConditionalLog(m_pCsvFile, "tK", m_JointData.tsKinect, bHeader);
-	ConditionalLog(m_pCsvFile, "tKW", m_JointData.tsWindows, bHeader);
+	ConditionalLog(pOfs, "tO", m_pSyncSocket->m_tsOdroid, bHeader);
+	ConditionalLog(pOfs, "tOW", m_pSyncSocket->m_tsWindows, bHeader);
+	ConditionalLog(pOfs, "tK", m_JointData.tsKinect, bHeader);
+	ConditionalLog(pOfs, "tKW", m_JointData.tsWindows, bHeader);
 
 	for (int i = 0; i < JOINT_DATA_SIZE; i++)
-		ConditionalLog(m_pCsvFile, m_JointData.names[i].c_str(), m_JointData.data[i], bHeader);
+		ConditionalLog(pOfs, m_JointData.names[i].c_str(), m_JointData.data[i], bHeader);
 	
-	m_pRobot->log(m_pCsvFile, bHeader);
-
-	*m_pCsvFile << '\n';
+	*pOfs << '\n';
 }
 
 void CBodyBasics::control()
@@ -288,6 +305,207 @@ void CBodyBasics::control()
 	else
 	{
 		m_pRobot->setCmd(v, w);
+	}
+}
+
+void CBodyBasics::calibrate()
+{
+	// Define the states of a finite state machine
+	typedef enum _CalibState {
+		Inactive = 0,
+		CountDown,
+		Act1,
+		Completed,
+		Aborted
+	} CalibState;
+	
+	typedef struct _Move {
+		int duration; // in milliseconds
+		float params[4];
+	} Move;
+	typedef const Move * pcMove;
+
+	typedef std::vector<pcMove> MoveSequence;
+
+	const Move m0 = { 0, 2.5f, (float)M_PI, 0.0f, 0.0f };
+	const Move m1 = { 7000, 3.0f, (float)M_PI, -0.8f, 0.0f };
+	const Move m2 = { 7000, 2.0f, (float)M_PI, -0.8f, 0.0f };
+	
+	static int iMove;
+	static CalibState s_State = Inactive;
+	static INT64 nTimeoutTick;
+	INT64 nCurrentTick = GetTickCount64();
+	if (s_State != Inactive)
+		log(m_pCalibFile);
+
+	
+
+	switch (s_State)
+	{
+	case Inactive:
+	{
+		if (m_pRobot->getState()->isCalibrating)
+		{
+			// Start Calibration
+			std::string fileName;
+			generateFileName(fileName, "calib");
+			m_pCalibFile = new std::ofstream(fileName, std::ofstream::out); // Open the calib file for writing
+			log(m_pCalibFile, true);
+			
+			// Let the robot stand still
+			m_pRobot->updateControlParams(m0.params);
+
+			// State transition
+			nTimeoutTick = nCurrentTick + 3000; // set timeout tick for CountDown
+			s_State = CountDown;
+		}		
+		break;
+	}
+
+	case CountDown:
+	{
+		// Update status message
+		const int nMaxCount = 64;
+		TCHAR pszText[nMaxCount], pszPrevText[nMaxCount];
+		StringCchPrintf(pszText, nMaxCount, L" Calibration: starting in %.0f seconds",
+			ceil((nTimeoutTick - nCurrentTick) / 1000.0) );
+		GetWindowText(m_hWndStatic, pszPrevText, nMaxCount);
+		if (wcscmp(pszText, pszPrevText))
+			SetWindowText(m_hWndStatic, pszText);
+
+		// State transition
+		if (nCurrentTick >= nTimeoutTick)
+		{
+			nTimeoutTick = nCurrentTick + 100000; // set timeout tick for Act1
+			s_State = Act1;
+			iMove = -1;
+
+		}
+		// Check if a request to stop calibration is received
+		if (m_pRobot->getState()->isCalibrating == false) s_State = Aborted;
+		break;
+	}
+
+	case Act1:
+	{
+		static INT64 nMoveUntilTick;
+		const MoveSequence Moves = {&m1, &m2, &m1, &m2 };
+
+		// Move initialization
+		if (iMove == -1)
+		{
+			iMove = 0;
+			nMoveUntilTick = nCurrentTick + Moves[iMove]->duration;
+		}
+		
+		// Execute the move
+		m_pRobot->updateControlParams(Moves[iMove]->params);
+
+		// Update status message
+		const int nMaxCount = 256;
+		TCHAR pszText[nMaxCount], pszPrevText[nMaxCount];
+		StringCchPrintf(pszText, nMaxCount, L" Calibration: Act1 in progress" \
+			"\n\tMove%d out of %d Moves in progress" \
+			"\n\t\tending in %.0f seconds." \
+			"\nTiming out in %.0f seconds",
+			iMove, Moves.size(), ceil((nMoveUntilTick - nCurrentTick) / 1000.0),
+			ceil((nTimeoutTick - nCurrentTick) / 1000.0) );
+		GetWindowText(m_hWndStatic, pszPrevText, nMaxCount);
+		if (wcscmp(pszText, pszPrevText))
+			SetWindowText(m_hWndStatic, pszText);
+
+		// Move transition
+		if (nCurrentTick >= nMoveUntilTick)
+		{
+			nMoveUntilTick = nCurrentTick + Moves[iMove]->duration;
+			iMove++;
+		}
+
+		// State transition
+		if (iMove >= Moves.size() || nCurrentTick >= nTimeoutTick)
+		{
+			iMove = -1;
+			nTimeoutTick += 3000;
+			s_State = Completed;
+		}
+		// Check if a request to stop calibration is received
+		if (m_pRobot->getState()->isCalibrating == false) s_State = Aborted;
+		break;
+	}
+	
+	case Completed:
+	case Aborted:
+	{
+		// Close file
+		m_pCalibFile->close();
+		delete m_pCalibFile;
+		m_pCalibFile = NULL;
+
+		// Update status message
+		if (s_State == Completed)
+			SetWindowText(m_hWndStatic, L" Calibration: Completed");
+		else if (s_State == Aborted)
+			SetWindowText(m_hWndStatic, L" Calibration: Aborted");
+		
+		if (m_pRobot->getState()->isCalibrating)
+		{
+			if (!m_pRobot->toggleCalibration())
+				SetWindowText(m_hWndStatic, L"Unexpected error occurred!");
+			else
+				updateButtons();
+		}
+		
+		// Recover control parameters
+		m_pRobot->setParams(m_pConfig);
+
+		// State transition
+		s_State = Inactive;
+		break;
+	}
+	}
+}
+
+void CBodyBasics::onPressingButtonFollow()
+{
+	if (!m_pRobot->toggleFollowing())
+		SetWindowText(m_hWndStatic, L"Following cannot be turned on while calibration is in progress.");
+	else
+		updateButtons();
+}
+
+void CBodyBasics::onPressingButtonCalibrate()
+{
+	if (!m_pRobot->toggleCalibration())
+		SetWindowText(m_hWndStatic, L"Calibration cannot start while following is on.");
+	else
+		updateButtons();	
+}
+
+void CBodyBasics::updateButtons()
+{
+	pcRobotState pcState = m_pRobot->getState();
+	if (pcState->isCalibrating == true)
+	{
+		EnableWindow(m_hWndButtonFollow, false);
+		EnableWindow(m_hWndButtonLoad, false);
+		SetWindowText(m_hWndButtonCalibrate, L" Stop Calibration");
+	}
+	else
+	{
+		EnableWindow(m_hWndButtonFollow, true);
+		EnableWindow(m_hWndButtonLoad, true);
+		SetWindowText(m_hWndButtonCalibrate, L" Start Calibration");
+	}
+
+	if (pcState->isFollowing == true)
+	{
+		EnableWindow(m_hWndButtonCalibrate, false);
+		SetWindowText(m_hWndButtonFollow, L" Stop Following");
+	}
+	else
+	{
+		EnableWindow(m_hWndButtonCalibrate, true);
+		SetWindowText(m_hWndButtonFollow, L" Start Following");
 	}
 }
 
@@ -409,8 +627,19 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
             PostQuitMessage(0);
             break;
 
-		//case WM_KEYDOWN:
-		//case WM_NOTIFY:
+		case WM_HOTKEY:
+		{
+			switch (wParam)
+			{
+			case 1:
+				onPressingButtonFollow();
+				break;
+			case 2:
+				onPressingButtonCalibrate();
+				break;
+			}
+			break;
+		}
 		case WM_COMMAND:
 			switch (wParam)
 			{
@@ -418,23 +647,11 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				HWND hButton = (HWND)lParam;
 				if (m_hWndButtonFollow == hButton)
 				{
-					// Follow/stop button
-					
-					if (m_pRobot->getState()->isFollowing == false)
-					{
-						m_pRobot->startFollowing();
-						SetWindowText(m_hWndButtonFollow, L" Stop Following");
-					}
-					else
-					{
-						m_pRobot->stopFollowing();
-						SetWindowText(m_hWndButtonFollow, L" Start Following");
-					}
-					
+					onPressingButtonFollow();
 				}
 				else if (m_hWndButtonCalibrate == hButton)
 				{
-
+					onPressingButtonCalibrate();
 				}
 				else if (m_hWndButtonOpenConfig == hButton)
 				{
@@ -450,7 +667,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 					int cnt = m_pConfig->getUpdateCount();
 					TCHAR pszText[32];
 					StringCchPrintf(pszText, 32, L"%d parameter%s updated.", cnt, cnt > 1 ? L"s" : L"");
-					SetWindowText(m_hWndStaticLoad, pszText);
+					SetWindowText(m_hWndStatic, pszText);
 				}
 				break;
 			}
@@ -651,8 +868,12 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				m_JointData.data[i++] = joints[jt.first].Position.Z;
 			}
 
-			// Record data
-			log();
+			// Record data if following is on
+			// if (m_pRobot->getState()->isFollowing == true)
+			
+			log(m_pKinectFile);
+			
+			calibrate();
 				
 		}
 		else
