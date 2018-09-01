@@ -279,6 +279,7 @@ void CBodyBasics::log(std::ofstream * pOfs, bool bHeader)
 		return;
 	ConditionalLog(pOfs, "tO", m_pSyncSocket->m_tsOdroid, bHeader);
 	ConditionalLog(pOfs, "tOW", m_pSyncSocket->m_tsWindows, bHeader);
+	ConditionalLog(pOfs, "trigger", m_pSyncSocket->m_tsSquareWave, bHeader);
 	ConditionalLog(pOfs, "tK", m_JointData.tsKinect, bHeader);
 	ConditionalLog(pOfs, "tKW", m_JointData.tsWindows, bHeader);
 
@@ -327,10 +328,6 @@ void CBodyBasics::calibrate()
 
 	typedef std::vector<pcMove> MoveSequence;
 
-	const Move m0 = { 0, 2.5f, (float)M_PI, 0.0f, 0.0f };
-	const Move m1 = { 7000, 3.0f, (float)M_PI, -0.8f, 0.0f };
-	const Move m2 = { 7000, 2.0f, (float)M_PI, -0.8f, 0.0f };
-	
 	static int iMove;
 	static CalibState s_State = Inactive;
 	static INT64 nTimeoutTick;
@@ -360,6 +357,7 @@ void CBodyBasics::calibrate()
 			m_pRobot->setCalibRobotLogging(true);
 
 			// Let the robot stand still
+			const Move m0 = { 0, 2.5f, (float)M_PI, 0.0f, 0.0f };
 			m_pRobot->updateControlParams(m0.params);
 
 			// State transition
@@ -396,6 +394,8 @@ void CBodyBasics::calibrate()
 	case Act1:
 	{
 		static INT64 nMoveUntilTick;
+		const Move m1 = { 8000, 3.0f, (float)M_PI, -0.8f, 0.0f };
+		const Move m2 = { 8000, 2.0f, (float)M_PI, -0.8f, 0.0f };
 		const MoveSequence Moves = {&m1, &m2};
 		const int nReps = 10;
 
@@ -403,11 +403,11 @@ void CBodyBasics::calibrate()
 		if (iMove == -1)
 		{
 			iMove = 0;
-			nMoveUntilTick = nCurrentTick + Moves[iMove]->duration;
+			nMoveUntilTick = nCurrentTick + Moves[iMove % Moves.size()]->duration;
 		}
 		
 		// Execute the move
-		m_pRobot->updateControlParams(Moves[iMove%nReps]->params);
+		m_pRobot->updateControlParams(Moves[iMove % Moves.size()]->params);
 
 		// Update status message
 		const int nMaxCount = 256;
@@ -425,7 +425,7 @@ void CBodyBasics::calibrate()
 		// Move transition
 		if (nCurrentTick >= nMoveUntilTick)
 		{
-			nMoveUntilTick = nCurrentTick + Moves[iMove%nReps]->duration;
+			nMoveUntilTick = nCurrentTick + Moves[iMove % Moves.size()]->duration;
 			iMove++;
 		}
 
