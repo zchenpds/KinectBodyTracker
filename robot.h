@@ -56,6 +56,7 @@ protected:
 	//Aria stuff
 	ArRobot*                    m_pArRobot;
 	ArSonarDevice*				m_pSonar;
+	ArAnalogGyro*				m_pGyro;
 	ArRobotConnector*           m_pRobotConn;
 	ArArgumentBuilder*          m_pArgs;
 	ArArgumentParser*           m_pParser;

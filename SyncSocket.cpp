@@ -9,7 +9,8 @@ SyncSocket::SyncSocket() :
 	m_bWs2Loaded(false),
 	m_bInitSucceeded(false),
 	m_tsWindows(-1),
-	m_tsOdroid(-1)
+	m_tsOdroid(-1),
+	m_tsSquareWave(-1)
 {
 }
 
@@ -128,6 +129,7 @@ OdroidTimestamp SyncSocket::receive(SportSolePacket * pPacket)
 			OdroidTimestamp * pOts = (OdroidTimestamp *)packet.Odroid_Timestamp; // assuming big-endian
 			m_tsWindows = GetTickCount64();
 			m_tsOdroid = *pOts;
+			m_tsSquareWave = (int)packet.Odroid_Trigger;
 			return *pOts;
 		}
 		else

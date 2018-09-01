@@ -6,6 +6,7 @@ Robot::Robot():
 	m_pArRobot(NULL),
 	m_pRobotConn(NULL),
 	m_pArgs(NULL),
+	m_pGyro(NULL),
 	m_pParser(NULL),
 	m_pActionFollow(NULL),
 	m_pActionLimiterForwards(NULL),
@@ -51,6 +52,12 @@ Robot::Robot():
 	// Object that connects to the robot or simulator using program options
 	m_pRobotConn = new ArRobotConnector(m_pParser, m_pArRobot);
 
+
+	// If the robot has an Analog Gyro, this object will activate it, and 
+	// if the robot does not automatically use the gyro to correct heading,
+	// this object reads data from it and corrects the pose in ArRobot
+	//m_pGyro = new ArAnalogGyro(m_pArRobot);
+
 	m_pActionFollow = new ActionFollow(this);
 	m_pActionLimiterForwards = new ArActionLimiterForwards();
 
@@ -68,6 +75,7 @@ Robot::~Robot()
 	Aria::exit(1);
 	delete m_pRobotConn;
 	delete m_pSonar;
+	delete m_pGyro;
 	delete m_pArRobot;
 	delete m_pArgs;
 	delete m_pParser;
@@ -83,10 +91,6 @@ bool Robot::init(HWND hWnd)
 	m_hWnd = hWnd;
 	m_pActionFollow->init(hWnd);
 
-	// If the robot has an Analog Gyro, this object will activate it, and 
-	// if the robot does not automatically use the gyro to correct heading,
-	// this object reads data from it and corrects the pose in ArRobot
-	//ArAnalogGyro gyro(m_pArRobot);
 
 	// Connect to the robot, get some initial data from it such as type and name,
 	// and then load parameter files for this robot.
