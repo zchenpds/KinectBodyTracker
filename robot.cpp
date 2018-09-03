@@ -53,11 +53,6 @@ Robot::Robot():
 	m_pRobotConn = new ArRobotConnector(m_pParser, m_pArRobot);
 
 
-	// If the robot has an Analog Gyro, this object will activate it, and 
-	// if the robot does not automatically use the gyro to correct heading,
-	// this object reads data from it and corrects the pose in ArRobot
-	//m_pGyro = new ArAnalogGyro(m_pArRobot);
-
 	m_pActionFollow = new ActionFollow(this);
 	m_pActionLimiterForwards = new ArActionLimiterForwards();
 
@@ -131,20 +126,20 @@ bool Robot::init(HWND hWnd)
 		return false;
 	}
 
-	// Used to access and process sonar range data
-	//ArSonarDevice sonarDev;
-
 
 	// Attach sonarDev to the robot so it gets data from it.
 	m_pArRobot->addRangeDevice(m_pSonar);
 
 
 #ifdef ROBOT_USE_ACTIONS
-	m_pArRobot->addAction(m_pActionFollow, 50);
+	m_pArRobot->addAction(m_pActionFollow, 52);
 	m_pArRobot->addAction(m_pActionLimiterForwards, 40);
 #endif // ROBOT_USE_ACTIONS
 
-	
+	// If the robot has an Analog Gyro, this object will activate it, and 
+	// if the robot does not automatically use the gyro to correct heading,
+	// this object reads data from it and corrects the pose in ArRobot
+	m_pGyro = new ArAnalogGyro(m_pArRobot);
 
 	m_pArRobot->enableMotors();
 
@@ -277,6 +272,9 @@ void Robot::updateVisualCmd(float x, float z)
 	//m_pArRobot->lock();
 
 	m_VisualCmd.tsWindows = GetTickCount64();
+
+	if (z < 0.01)
+		z = m_Params.VmDistance;
 	
 	// This condition should be easily satisfied since SIP packets arrive every 100 ms
 	//if (m_VisualCmd.tsWindows - m_State.tsWindows < 150)

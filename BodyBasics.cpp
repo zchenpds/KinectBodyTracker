@@ -280,6 +280,8 @@ void CBodyBasics::log(std::ofstream * pOfs, bool bHeader)
 	ConditionalLog(pOfs, "tO", m_pSyncSocket->m_tsOdroid, bHeader);
 	ConditionalLog(pOfs, "tOW", m_pSyncSocket->m_tsWindows, bHeader);
 	ConditionalLog(pOfs, "trigger", m_pSyncSocket->m_tsSquareWave, bHeader);
+	//ConditionalLog(pOfs, "cntY", m_pSyncSocket->m_nPacketCount, bHeader);
+	//ConditionalLog(pOfs, "cntN", m_pSyncSocket->m_nNoPacketCount, bHeader);
 	ConditionalLog(pOfs, "tK", m_JointData.tsKinect, bHeader);
 	ConditionalLog(pOfs, "tKW", m_JointData.tsWindows, bHeader);
 
@@ -867,7 +869,26 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				}
 			}
 			
-			m_pRobot->updateVisualCmd(pxSum/cnt, pzSum/cnt);
+			if (joints[JointType_HandTipLeft].Position.Y > 0.6 && joints[JointType_HandTipRight].Position.Y > 0.6)
+			{
+				// Stop
+				m_pRobot->updateVisualCmd(0, 0);
+			}
+			else if(joints[JointType_HandTipLeft].Position.Y > 0.6)
+			{
+				// Adjust Heading
+				m_pRobot->updateVisualCmd(joints[JointType_HandTipLeft].Position.X - pxSum / cnt, pzSum / cnt);
+			}
+			else if (joints[JointType_HandTipRight].Position.Y > 0.6)
+			{
+				// Adjust Heading
+				m_pRobot->updateVisualCmd(joints[JointType_HandTipRight].Position.X - pxSum / cnt, pzSum / cnt);
+			}
+			else
+			{
+				//m_pRobot->updateVisualCmd(pxSum / cnt, pzSum / cnt);
+				m_pRobot->updateVisualCmd(0, pzSum / cnt);
+			}
 			
 			// Get data ready for recording
 			m_JointData.tsWindows = GetTickCount64(); // For now not to be logged.
@@ -883,6 +904,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 
 			// Record data if following is on
 			// if (m_pRobot->getState()->isFollowing == true)
+
 			
 			log(m_pKinectFile);
 			
