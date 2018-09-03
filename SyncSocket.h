@@ -30,14 +30,17 @@ class SyncSocket
 private:
 	SOCKET				m_socketListen;
 	WSAEVENT			m_hEventRecv;
-	int					m_nPacketCount;
-	int					m_nErrorCount;
+	
 	bool				m_bWs2Loaded; // indicates whether WSACleanup() is needed on exit
 	bool				m_bInitSucceeded;
 public:
 	INT64				m_tsWindows;
 	OdroidTimestamp		m_tsOdroid;
 	int					m_tsSquareWave;
+
+	int					m_nNoPacketCount;
+	int					m_nPacketCount;
+	int					m_nErrorCount;
 	
 public:
 	SyncSocket();

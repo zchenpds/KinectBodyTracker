@@ -10,7 +10,8 @@ SyncSocket::SyncSocket() :
 	m_bInitSucceeded(false),
 	m_tsWindows(-1),
 	m_tsOdroid(-1),
-	m_tsSquareWave(-1)
+	m_tsSquareWave(-1),
+	m_nNoPacketCount(0)
 {
 }
 
@@ -137,6 +138,10 @@ OdroidTimestamp SyncSocket::receive(SportSolePacket * pPacket)
 			m_nErrorCount++;
 		}
 
+	}
+	else
+	{
+		m_nNoPacketCount++;
 	}
 
 	return (OdroidTimestamp)(-1); // the socket received nothing or some error occurred.
