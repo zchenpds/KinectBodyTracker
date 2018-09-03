@@ -1,6 +1,5 @@
 Debug/*
 !Debug/AriaDebugVC15.dll
-!Debug/matlab
 *.fig
 *.zip
 
