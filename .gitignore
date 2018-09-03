@@ -10,3 +10,5 @@ Release/*
 *.csv
 docs/*
 *.user
+
+BodyTracker-Debug.sln
