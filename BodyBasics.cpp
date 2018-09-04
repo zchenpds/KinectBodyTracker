@@ -250,7 +250,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 #endif // ROBOT_USE_MOTION_COMMAND_ACTIONS
 
 		//calibrate();
-
+		Sleep(2);
         while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
         {
 			if (WM_QUIT == msg.message) break;
@@ -877,12 +877,16 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			else if(joints[JointType_HandTipLeft].Position.Y > 0.6)
 			{
 				// Adjust Heading
-				m_pRobot->updateVisualCmd(joints[JointType_HandTipLeft].Position.X - pxSum / cnt, pzSum / cnt);
+				m_pRobot->updateVisualCmd(
+					saturate(joints[JointType_HandTipLeft].Position.X - pxSum / cnt, -0.5f, 0.5f), 
+					pzSum / cnt);
 			}
 			else if (joints[JointType_HandTipRight].Position.Y > 0.6)
 			{
 				// Adjust Heading
-				m_pRobot->updateVisualCmd(joints[JointType_HandTipRight].Position.X - pxSum / cnt, pzSum / cnt);
+				m_pRobot->updateVisualCmd(
+					saturate(joints[JointType_HandTipRight].Position.X - pxSum / cnt, -0.5f, 0.5f), 
+					pzSum / cnt);
 			}
 			else
 			{

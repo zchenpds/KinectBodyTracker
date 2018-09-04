@@ -30,6 +30,7 @@
 #include <geometry_msgs/Twist.h>
 
 #include "Aria.h"
+#include <algorithm>
 
 #pragma comment (lib, "d2d1.lib")
 
@@ -61,4 +62,9 @@ inline void ConditionalLog(std::ofstream * pOfs, char const * name, const T & va
 {
 	if (bHeader) *pOfs << name << ',';
 	else *pOfs << value << ',';
+}
+
+template<typename T>
+T saturate(T VAL, T MIN, T MAX) {
+	return min(max(VAL, MIN), MAX);
 }
