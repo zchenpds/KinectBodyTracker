@@ -14,5 +14,6 @@ function [ variances ] = obj_fun( dataKinect, dataRobot, params)
         varsY(i) = nanvar(yW);
     end
     variances = [varsX; varsY];
+    %variances = varsX(i);
 end
 

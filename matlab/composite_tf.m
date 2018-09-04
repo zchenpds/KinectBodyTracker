@@ -26,10 +26,11 @@ function [ xW, yW ] = composite_tf(dataKinect, dataRobot, params, cmd )
         scale2 = params(3);
         tau = params(4);
     end
-
-    xRW = interp1(dataRobot.tRW, dataRobot.x, dataKinect.tKW + tau);
-    yRW = interp1(dataRobot.tRW, dataRobot.y, dataKinect.tKW + tau);
-    thRW = interp1(dataRobot.tRW, dataRobot.th, dataKinect.tKW + tau);
+    
+    [tRW, index] = unique(dataRobot.tRW); 
+    xRW = interp1(tRW, dataRobot.x(index), dataKinect.tKW + tau);
+    yRW = interp1(tRW, dataRobot.y(index), dataKinect.tKW + tau);
+    thRW = interp1(tRW, dataRobot.th(index), dataKinect.tKW + tau);
     thRW0 = zeros(size(thRW));
     [xR, yR] = tf1(zK, xK, gamma);
     [xW, yW] = tf2(xR, yR, xRW, yRW, thRW, scale);

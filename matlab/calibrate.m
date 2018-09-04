@@ -12,7 +12,7 @@ if isequal(filename1,0)
    return
 end
 file1 = fullfile(path1, filename1);
-dataKinect = importKinectData2(file1);
+dataKinect = importKinectData3(file1);
 
 filename2 = strrep(filename1, 'Kinect', 'Robot');
 file2 = fullfile(path1, filename2);
@@ -45,7 +45,9 @@ if 1
     tau = getTau(CalibModel, params);
 
 else
-    params = [pi, 1.0, 1.0, 0];
+    % params = [pi, 1.0, 0];
+    %params = [3.1315, 0.9831, -0.04];
+    params = [pi, 1, 0];
 end
 
 %% Interpolation
@@ -123,7 +125,7 @@ subplot(2, 1, 1);
 h11 = plot(dataKinect.tKW, dataKinect.ankleLX, '.-');
 hold on;
 h12 = plot(dataKinect.tKW, dataKinect.footLX, '.-');
-legend([h11, h12], "^Wy_L_A", "^Wy_L_F")
+legend([h11, h12], "^Kx_L_A", "^Kx_L_F")
 grid on;
 ylabel("Coordinates (m)")
 xlabel("Time (s)");
@@ -148,7 +150,7 @@ subplot(2, 1, 1);
 h11 = plot(dataKinect.tKW, dataKinect.ankleRX, '.-');
 hold on;
 h12 = plot(dataKinect.tKW, dataKinect.footRX, '.-');
-legend([h11, h12], "^Wy_R_A", "^Wy_R_F")
+legend([h11, h12], "^Kx_R_A", "^Kx_R_F")
 grid on;
 ylabel("Coordinates (m)")
 xlabel("Time (s)");

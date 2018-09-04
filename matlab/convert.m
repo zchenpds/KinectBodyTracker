@@ -20,7 +20,7 @@ dataRobot = importRobotData2(file2);
 
 
 %%
-params = [3.1520, 0.9888, -0.0541];
+params = [3.1420, 0.9888, -0.0541];
 [xW_LA, yW_LA] = composite_tf(dataKinect, dataRobot, params, 'ankleL');
 [xW_RA, yW_RA] = composite_tf(dataKinect, dataRobot, params, 'ankleR');
 ts = (dataKinect.tKW - dataKinect.tKW(1))/1000;
