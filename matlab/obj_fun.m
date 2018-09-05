@@ -10,8 +10,12 @@ function [ variances ] = obj_fun( dataKinect, dataRobot, params)
     varsY = zeros(length(list),1);
     for i=list
         [xW, yW] = composite_tf(dataKinect, dataRobot, params, i);
-        varsX(i) = nanvar(xW);
-        varsY(i) = nanvar(yW);
+        %varsX(i) = nanvar(xW);
+        %varsY(i) = nanvar(yW);
+        xW(isnan(xW)) = [];
+        yW(isnan(yW)) = [];
+        varsX(i) = mean(movvar(xW, 200));
+        varsY(i) = mean(movvar(yW, 200));
     end
     variances = [varsX; varsY];
     %variances = varsX(i);

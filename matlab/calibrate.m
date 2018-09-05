@@ -46,8 +46,10 @@ if 1
 
 else
     % params = [pi, 1.0, 0];
-    %params = [3.1315, 0.9831, -0.04];
-    params = [pi, 1, 0];
+    params = [3.1315, 0.9831, -0.05];
+    %params = [pi, 1, 0];
+    
+    tau = params(3);
 end
 
 %% Interpolation
