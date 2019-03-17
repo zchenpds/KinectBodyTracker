@@ -2,7 +2,8 @@
 #include <strsafe.h>
 
 
-Robot::Robot():
+Robot::Robot() :
+	BaseLogger("Robot"),
 	m_pArRobot(NULL),
 	m_pRobotConn(NULL),
 	m_pArgs(NULL),
@@ -10,8 +11,7 @@ Robot::Robot():
 	m_pParser(NULL),
 	m_pActionFollow(NULL),
 	m_pActionLimiterForwards(NULL),
-	m_hWnd(NULL),
-	m_pCalibRobotFile(NULL)
+	m_hWnd(NULL)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
 	m_State.isFollowing = false;
@@ -56,11 +56,8 @@ Robot::Robot():
 	m_pActionFollow = new ActionFollow(this);
 	m_pActionLimiterForwards = new ArActionLimiterForwards();
 
-	// Open a csv file
-	std::string fileNameRobot;
-	generateFileName(fileNameRobot, "Robot");
-	m_pRobotFile = new std::ofstream(fileNameRobot, std::ofstream::out); // Open the csv file
-	log(m_pRobotFile, true);
+	// log heading of the csv file
+	log(true);
 }
 
 
@@ -76,9 +73,6 @@ Robot::~Robot()
 	delete m_pParser;
 	delete m_pActionFollow;
 	delete m_pActionLimiterForwards;
-	m_pRobotFile->close();
-	delete m_pRobotFile;
-	
 }
 
 bool Robot::init(HWND hWnd)
@@ -162,35 +156,29 @@ void Robot::setParams(Config * pConfig)
 	m_pActionFollow->setParams(pConfig);
 }
 
-void Robot::log(std::ofstream * pOfs, bool bHeader)
+void Robot::log(bool bHeader) const
 {
-	//m_pArRobot->lock();
-
 	
-	if (pOfs == NULL)
-		return;
-	
-	ConditionalLog(pOfs, "tR", m_State.tsRobot, bHeader);
-	ConditionalLog(pOfs, "tRW", m_State.tsWindows, bHeader);
-	ConditionalLog(pOfs, "x", m_State.x, bHeader);
-	ConditionalLog(pOfs, "y", m_State.y, bHeader);
-	ConditionalLog(pOfs, "th", m_State.th, bHeader);
-	ConditionalLog(pOfs, "v", m_State.v, bHeader);
-	ConditionalLog(pOfs, "w", m_State.w, bHeader);
-	ConditionalLog(pOfs, "batVolt", m_State.batteryVolt, bHeader);
-	ConditionalLog(pOfs, "isFollowing", m_State.isFollowing, bHeader);
-	ConditionalLog(pOfs, "xVm", m_State.xVm, bHeader);
-	ConditionalLog(pOfs, "yVm", m_State.yVm, bHeader);
-	ConditionalLog(pOfs, "xVmG", m_VisualCmd.xVmGoal, bHeader);
-	ConditionalLog(pOfs, "yVmG", m_VisualCmd.yVmGoal, bHeader);
-	ConditionalLog(pOfs, "vD", m_ControlCmd.v, bHeader);
-	ConditionalLog(pOfs, "wD", m_ControlCmd.w, bHeader);
-	ConditionalLog(pOfs, "dVmG", m_Params.VmDistance, bHeader);
-	ConditionalLog(pOfs, "hVmG", m_Params.VmHeading, bHeader);
-	ConditionalLog(pOfs, "vScale", m_Params.vScale, bHeader);
-	ConditionalLog(pOfs, "wScale", m_Params.wScale, bHeader);
-	*pOfs << '\n';
-	//m_pArRobot->unlock();
+	conditionalLog("tR", m_State.tsRobot, bHeader);
+	conditionalLog("tRW", m_State.tsWindows, bHeader);
+	conditionalLog("x", m_State.x, bHeader);
+	conditionalLog("y", m_State.y, bHeader);
+	conditionalLog("th", m_State.th, bHeader);
+	conditionalLog("v", m_State.v, bHeader);
+	conditionalLog("w", m_State.w, bHeader);
+	conditionalLog("batVolt", m_State.batteryVolt, bHeader);
+	conditionalLog("isFollowing", m_State.isFollowing, bHeader);
+	conditionalLog("xVm", m_State.xVm, bHeader);
+	conditionalLog("yVm", m_State.yVm, bHeader);
+	conditionalLog("xVmG", m_VisualCmd.xVmGoal, bHeader);
+	conditionalLog("yVmG", m_VisualCmd.yVmGoal, bHeader);
+	conditionalLog("vD", m_ControlCmd.v, bHeader);
+	conditionalLog("wD", m_ControlCmd.w, bHeader);
+	conditionalLog("dVmG", m_Params.VmDistance, bHeader);
+	conditionalLog("hVmG", m_Params.VmHeading, bHeader);
+	conditionalLog("vScale", m_Params.vScale, bHeader);
+	conditionalLog("wScale", m_Params.wScale, bHeader);
+	logEOL();
 }
 
 void Robot::updateState() // To do: add mutex.
@@ -216,9 +204,7 @@ void Robot::updateState() // To do: add mutex.
 	m_State.xVm = m_State.x + m_Params.VmDistance * cos(m_State.th + m_Params.VmHeading);
 	m_State.yVm = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);
 
-	log(m_pRobotFile);
-	if (m_pCalibRobotFile)
-		log(m_pCalibRobotFile);
+	log();
 	//m_pArRobot->unlock();
 }
 
@@ -334,32 +320,8 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 
 void Robot::setCalibRobotLogging(bool bCalib)
 {
-	if (bCalib)
-	{
-		// Create calib-Robot file
-		if (!m_pCalibRobotFile)
-		{
-			std::string fileNameRobot;
-			generateFileName(fileNameRobot, "calib-Robot");
-			m_pCalibRobotFile = new std::ofstream(fileNameRobot, std::ofstream::out); // Open a calib file for writing
-			log(m_pCalibRobotFile, true);
-		}
-	}
-	else
-	{
-		// Release calib-Robot file
-		if (m_pCalibRobotFile)
-		{
-			m_pCalibRobotFile->close();
-			delete m_pCalibRobotFile;
-			m_pCalibRobotFile = NULL;
-		}
-	}
-	
+	m_State.isCalibrating = bCalib;
 }
-
-
-
 
 void generateFileName(std::string & dest, const char * suffix)
 {

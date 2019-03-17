@@ -49,6 +49,8 @@ int APIENTRY wWinMain(
 /// Constructor
 /// </summary>
 CBodyBasics::CBodyBasics() :
+	BaseLogger("Kinect"),
+	m_pCalibState(CS_Inactive),
     m_hWnd(NULL),
     m_nStartTime(0),
     m_nLastCounter(0),
@@ -70,7 +72,6 @@ CBodyBasics::CBodyBasics() :
 	m_pRosPublisher(NULL),
 	m_pConfig(NULL),
 	m_pRobot(NULL),
-	m_pCalibKinectFile(NULL),
 	m_pSyncSocket(NULL)
 {
     LARGE_INTEGER qpf = {0};
@@ -78,11 +79,6 @@ CBodyBasics::CBodyBasics() :
     {
         m_fFreq = double(qpf.QuadPart);
     }
-
-	// Open a csv file
-	std::string fileNameKinect;
-	generateFileName(fileNameKinect, "Kinect");
-	m_pKinectFile = new std::ofstream(fileNameKinect, std::ofstream::out); // Open the csv file
 	
 	//*m_pKinectFile << "123" << std::endl; // Test write
 
@@ -102,7 +98,7 @@ CBodyBasics::CBodyBasics() :
 		m_JointData.names[i++] = std::string(jt.second) + "Y";
 		m_JointData.names[i++] = std::string(jt.second) + "Z";
 	}
-	log(m_pKinectFile, true); //log header
+	log(true); //log header
 	
 }
   
@@ -116,16 +112,6 @@ CBodyBasics::~CBodyBasics()
 	delete m_pSyncSocket;
 	delete m_pConfig;
 	//delete m_pRosPublisher;
-
-	m_pKinectFile->close();
-	delete m_pKinectFile;
-
-	if (m_pCalibKinectFile)
-	{
-		m_pCalibKinectFile->close();
-		delete m_pCalibKinectFile;
-		m_pCalibKinectFile = NULL;
-	}
 		
 
     DiscardDirect2DResources();
@@ -273,22 +259,20 @@ void CBodyBasics::setParams()
 	m_pRobot->setParams(m_pConfig);
 }
 
-void CBodyBasics::log(std::ofstream * pOfs, bool bHeader)
+void CBodyBasics::log(bool bHeader) const
 {
-	if (pOfs == NULL)
-		return;
-	ConditionalLog(pOfs, "tO", m_pSyncSocket->m_tsOdroid, bHeader);
-	ConditionalLog(pOfs, "tOW", m_pSyncSocket->m_tsWindows, bHeader);
-	ConditionalLog(pOfs, "trigger", m_pSyncSocket->m_tsSquareWave, bHeader);
-	//ConditionalLog(pOfs, "cntY", m_pSyncSocket->m_nPacketCount, bHeader);
-	//ConditionalLog(pOfs, "cntN", m_pSyncSocket->m_nNoPacketCount, bHeader);
-	ConditionalLog(pOfs, "tK", m_JointData.tsKinect, bHeader);
-	ConditionalLog(pOfs, "tKW", m_JointData.tsWindows, bHeader);
+	conditionalLog("tO", m_pSyncSocket->m_tsOdroid, bHeader);
+	conditionalLog("tOW", m_pSyncSocket->m_tsWindows, bHeader);
+	conditionalLog("trigger", m_pSyncSocket->m_tsSquareWave, bHeader);
+	//conditionalLog("cntY", m_pSyncSocket->m_nPacketCount, bHeader);
+	//conditionalLog("cntN", m_pSyncSocket->m_nNoPacketCount, bHeader);
+	conditionalLog("tK", m_JointData.tsKinect, bHeader);
+	conditionalLog("tKW", m_JointData.tsWindows, bHeader);
 
 	for (int i = 0; i < JOINT_DATA_SIZE; i++)
-		ConditionalLog(pOfs, m_JointData.names[i].c_str(), m_JointData.data[i], bHeader);
+		conditionalLog(m_JointData.names[i].c_str(), m_JointData.data[i], bHeader);
 	
-	*pOfs << '\n';
+	logEOL();
 }
 
 void CBodyBasics::control()
@@ -313,15 +297,6 @@ void CBodyBasics::control()
 
 void CBodyBasics::calibrate()
 {
-	// Define the states of a finite state machine
-	typedef enum _CalibState {
-		Inactive = 0,
-		CountDown,
-		Act1,
-		Completed,
-		Aborted
-	} CalibState;
-	
 	typedef struct _Move {
 		int duration; // in milliseconds
 		float params[4];
@@ -331,30 +306,17 @@ void CBodyBasics::calibrate()
 	typedef std::vector<pcMove> MoveSequence;
 
 	static int iMove;
-	static CalibState s_State = Inactive;
+	
 	static INT64 nTimeoutTick;
 	INT64 nCurrentTick = GetTickCount64();
-	if (s_State != Inactive)
-	{
-		if (m_pCalibKinectFile)
-			log(m_pCalibKinectFile);
-		else
-			s_State = Aborted;
-	}
 
-	switch (s_State)
+	switch (m_pCalibState)
 	{
-	case Inactive:
+	case CS_Inactive:
 	{
 		if (m_pRobot->getState()->isCalibrating)
 		{
 			// --- Start Calibration ---
-
-			// Create calib-Kinect file
-			std::string fileNameKinect;
-			generateFileName(fileNameKinect, "calib-Kinect");
-			m_pCalibKinectFile = new std::ofstream(fileNameKinect, std::ofstream::out); // Open a calib file for writing
-			log(m_pCalibKinectFile, true);
 			
 			m_pRobot->setCalibRobotLogging(true);
 
@@ -364,12 +326,12 @@ void CBodyBasics::calibrate()
 
 			// State transition
 			nTimeoutTick = nCurrentTick + 3000; // set timeout tick for CountDown
-			s_State = CountDown;
+			m_pCalibState = CS_CountDown;
 		}		
 		break;
 	}
 
-	case CountDown:
+	case CS_CountDown:
 	{
 		// Update status message
 		const int nMaxCount = 64;
@@ -384,16 +346,16 @@ void CBodyBasics::calibrate()
 		if (nCurrentTick >= nTimeoutTick)
 		{
 			nTimeoutTick = nCurrentTick + 150000; // set timeout tick for Act1
-			s_State = Act1;
+			m_pCalibState = CS_Act1;
 			iMove = -1;
 
 		}
 		// Check if a request to stop calibration is received
-		if (m_pRobot->getState()->isCalibrating == false) s_State = Aborted;
+		if (m_pRobot->getState()->isCalibrating == false) m_pCalibState = CS_Aborted;
 		break;
 	}
 
-	case Act1:
+	case CS_Act1:
 	{
 		static INT64 nMoveUntilTick;
 		const Move m1 = { 8000, 3.0f, (float)M_PI, -0.8f, 0.0f };
@@ -436,30 +398,24 @@ void CBodyBasics::calibrate()
 		{
 			iMove = -1;
 			nTimeoutTick += 3000;
-			s_State = Completed;
+			m_pCalibState = CS_Completed;
 		}
 		// Check if a request to stop calibration is received
-		if (m_pRobot->getState()->isCalibrating == false) s_State = Aborted;
+		if (m_pRobot->getState()->isCalibrating == false) m_pCalibState = CS_Aborted;
 		break;
 	}
 	
-	case Completed:
-	case Aborted:
+	case CS_Completed:
+	case CS_Aborted:
 	{
 		// Close file
-		if (m_pCalibKinectFile)
-		{
-			m_pCalibKinectFile->close();
-			delete m_pCalibKinectFile;
-			m_pCalibKinectFile = NULL;
-		}
 
 		m_pRobot->setCalibRobotLogging(false);
 
 		// Update status message
-		if (s_State == Completed)
+		if (m_pCalibState == CS_Completed)
 			SetWindowText(m_hWndStatic, L" Calibration: Completed");
-		else if (s_State == Aborted)
+		else if (m_pCalibState == CS_Aborted)
 			SetWindowText(m_hWndStatic, L" Calibration: Aborted");
 		
 		if (m_pRobot->getState()->isCalibrating)
@@ -474,7 +430,7 @@ void CBodyBasics::calibrate()
 		m_pRobot->setParams(m_pConfig);
 
 		// State transition
-		s_State = Inactive;
+		m_pCalibState = CS_Inactive;
 		break;
 	}
 	}
@@ -910,7 +866,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			// if (m_pRobot->getState()->isFollowing == true)
 
 			
-			log(m_pKinectFile);
+			log();
 			
 			calibrate();
 				

@@ -4,6 +4,7 @@
 #include "ActionFollow.h"
 #include <fstream>
 #include "stdafx.h"
+#include "BaseLogger.h"
 
 #define ROBOT_USE_ACTIONS
 //#define ROBOT_USE_MOTION_COMMAND_FUNCTIONS
@@ -50,7 +51,7 @@ typedef struct ControlCmd_ {
 	float			w;
 } ControlCmd;
 
-class Robot
+class Robot : BaseLogger
 {
 protected:
 	//Aria stuff
@@ -61,8 +62,6 @@ protected:
 	ArArgumentBuilder*          m_pArgs;
 	ArArgumentParser*           m_pParser;
 	// My stuff
-	std::ofstream*				m_pRobotFile;
-	std::ofstream*				m_pCalibRobotFile;
 	RobotState                  m_State;
 	VisualCmd					m_VisualCmd; // not initalized
 	ControlParams				m_Params; // not initialized
@@ -76,7 +75,7 @@ public:
 	~Robot();
 	bool init(HWND hWnd);
 	void setParams(Config * pConfig);
-	void log(std::ofstream * pOfs, bool bHeader = false);
+	void log(bool bHeader = false) const override;
 	void updateState();
 	pcRobotState getState();
 	void setCmd(float v, float w);
@@ -100,5 +99,5 @@ public:
 };
 
 
-#include <iomanip>
+//#include <iomanip>
 void generateFileName(std::string & dest, const char * suffix = "");

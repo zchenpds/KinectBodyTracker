@@ -31,6 +31,8 @@
 
 #include "Aria.h"
 #include <algorithm>
+#include <iomanip>
+#include <iostream>
 
 #pragma comment (lib, "d2d1.lib")
 

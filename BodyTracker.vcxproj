@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BaseLogger.cpp" />
     <ClCompile Include="BodyBasics.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ActionFollow.cpp" />
@@ -36,6 +37,7 @@
     <ResourceCompile Include="BodyBasics.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BaseLogger.h" />
     <ClInclude Include="BodyBasics.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ActionFollow.h" />

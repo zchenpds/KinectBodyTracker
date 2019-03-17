@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "SyncSocket.h"
 #include "robot.h"
+#include "BaseLogger.h"
 
 const std::map <JointType, const char * > jointTypeMap = {
 	{JointType_KneeLeft, "kneeL"}, 
@@ -66,7 +67,7 @@ void ErrorExit(LPTSTR lpszFunction)
 //void generateFileName(std::string & dest, const char * suffix = "");
 
 
-class CBodyBasics
+class CBodyBasics : BaseLogger
 {
     static const int        cDepthWidth  = 512;
     static const int        cDepthHeight = 424;
@@ -151,13 +152,21 @@ private:
 
 	// ROS Publisher
 	RosPublisher*			m_pRosPublisher;
-	std::ofstream*			m_pKinectFile;
-	std::ofstream*			m_pCalibKinectFile;
 	Config*					m_pConfig;
 
 	//
+	// Define the states of a finite state machine
+	typedef enum _CalibState {
+		CS_Inactive = 0,
+		CS_CountDown,
+		CS_Act1,
+		CS_Completed,
+		CS_Aborted
+	} CalibState;
+	CalibState				m_pCalibState;
+
 	void                    setParams();
-	void					log(std::ofstream * pOfs, bool bHeader = false);
+	void					log(bool bHeader = false) const override;
 	void					control();
 	void					calibrate();
 
