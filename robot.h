@@ -44,6 +44,8 @@ typedef struct ControlParams_ {
 								// the robot and to the virtual marker, in radians.
 	float			vScale;
 	float			wScale;
+
+	bool			isArActionLimiterForwardsEnabled;
 } ControlParams, *pControlParams;
 
 typedef struct ControlCmd_ {
@@ -98,6 +100,3 @@ public:
 	
 };
 
-
-//#include <iomanip>
-void generateFileName(std::string & dest, const char * suffix = "");

@@ -72,6 +72,25 @@ bool Config::assign(const std::string & strKey, float & fValue)
 	}
 }
 
+bool Config::assign(const std::string & strKey, bool & bValue)
+{
+	ConfigParams::iterator it;
+	it = m_mapParams.find(strKey);
+	if (it == m_mapParams.end())
+		return false; // Failed to find the parameter.
+	else
+	{
+		bool bValueNew = m_mapParams[strKey].compare("1") == 0 || m_mapParams[strKey].compare("true") == 0 || \
+			m_mapParams[strKey].compare("True") == 0 || m_mapParams[strKey].compare("TRUE") == 0;
+		if (bValue != bValueNew)
+		{
+			m_countUpdates++;
+			bValue = bValueNew;
+		}
+		return true; // Succeeded in assigning the config parameter
+	}
+}
+
 void Config::resetCounter()
 {
 	m_countUpdates = 0;

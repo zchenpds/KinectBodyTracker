@@ -17,6 +17,7 @@ Robot::Robot() :
 	m_State.isFollowing = false;
 	m_State.isCalibrating = false;
 	m_State.tsWindows = -1;
+	m_Params.isArActionLimiterForwardsEnabled = true;
 
 	m_Params.VmDistance = 2.5;
 	m_Params.VmHeading = 0;
@@ -152,6 +153,11 @@ void Robot::setParams(Config * pConfig)
 	std::string StrRobotPort;
 	pConfig->assign("robotPort", StrRobotPort);
 	m_pArgs->add("-robotPort %s", StrRobotPort.c_str());
+
+	pConfig->assign("isArActionLimiterForwardsEnabled", m_Params.isArActionLimiterForwardsEnabled);
+	if (m_Params.isArActionLimiterForwardsEnabled) m_pActionLimiterForwards->setParameters();
+	else m_pActionLimiterForwards->setParameters(1.0, 1.0, 2000.0, 0.1);
+	
 
 	m_pActionFollow->setParams(pConfig);
 }
@@ -321,28 +327,4 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 void Robot::setCalibRobotLogging(bool bCalib)
 {
 	m_State.isCalibrating = bCalib;
-}
-
-void generateFileName(std::string & dest, const char * suffix)
-{
-	std::string strSuffix(suffix);
-	static std::map<std::string, int> MapCounter;
-	if (MapCounter.find(strSuffix) == MapCounter.end())
-		MapCounter[strSuffix] = 0;
-	else
-		MapCounter[strSuffix]++;
-
-	time_t rawtime; // the number of seconds elapsed since 1900 at 00:00 UTC
-	time(&rawtime); // obtain current time
-	struct tm *timeinfo = localtime(&rawtime); // represent current time using struct
-	std::stringstream ssFileName; // Construct the name of the csv file
-	ssFileName << "data-"
-		<< timeinfo->tm_year + 1900 << std::setfill('0')
-		<< std::setw(2) << timeinfo->tm_mon + 1
-		<< std::setw(2) << timeinfo->tm_mday << "-"
-		<< std::setw(2) << timeinfo->tm_hour << "-"
-		<< std::setw(2) << timeinfo->tm_min << "-"
-		<< std::setw(2) << timeinfo->tm_sec << "-"
-		<< suffix << MapCounter[strSuffix] << ".csv";
-	dest = ssFileName.str();
 }
