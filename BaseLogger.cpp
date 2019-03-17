@@ -21,6 +21,7 @@ BaseLogger::~BaseLogger()
 
 void BaseLogger::generateFileName(std::string & dest, const char * suffix)
 {
+	system("mkdir data");
 	std::string strSuffix(suffix);
 	static std::map<std::string, int> MapCounter;
 	if (MapCounter.find(strSuffix) == MapCounter.end())
@@ -32,7 +33,7 @@ void BaseLogger::generateFileName(std::string & dest, const char * suffix)
 	time(&rawtime); // obtain current time
 	struct tm *timeinfo = localtime(&rawtime); // represent current time using struct
 	std::stringstream ssFileName; // Construct the name of the csv file
-	ssFileName << "data-"
+	ssFileName << "data\\data-"
 		<< timeinfo->tm_year + 1900 << std::setfill('0')
 		<< std::setw(2) << timeinfo->tm_mon + 1
 		<< std::setw(2) << timeinfo->tm_mday << "-"
