@@ -80,12 +80,30 @@ bool Config::assign(const std::string & strKey, bool & bValue)
 		return false; // Failed to find the parameter.
 	else
 	{
-		bool bValueNew = m_mapParams[strKey].compare("1") == 0 || m_mapParams[strKey].compare("true") == 0 || \
+		bool bValueNew = m_mapParams[strKey].compare("1") == 0 || m_mapParams[strKey].compare("true") == 0 ||
 			m_mapParams[strKey].compare("True") == 0 || m_mapParams[strKey].compare("TRUE") == 0;
 		if (bValue != bValueNew)
 		{
 			m_countUpdates++;
 			bValue = bValueNew;
+		}
+		return true; // Succeeded in assigning the config parameter
+	}
+}
+
+bool Config::assign(const std::string & strKey, int & iValue)
+{
+	ConfigParams::iterator it;
+	it = m_mapParams.find(strKey);
+	if (it == m_mapParams.end())
+		return false; // Failed to find the parameter.
+	else
+	{
+		int iValueNew = stoi(m_mapParams[strKey]);
+		if (iValue != iValueNew)
+		{
+			m_countUpdates++;
+			iValue = iValueNew;
 		}
 		return true; // Succeeded in assigning the config parameter
 	}

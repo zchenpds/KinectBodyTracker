@@ -17,6 +17,7 @@ public:
 	bool assign(const std::string &strKey, std::string & strValue);
 	bool assign(const std::string & strKey, float & fValue);
 	bool assign(const std::string & strKey, bool & bValue);
+	bool assign(const std::string & strKey, int & iValue);
 
 	void resetCounter();
 	int getUpdateCount();

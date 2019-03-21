@@ -1,6 +1,6 @@
 #include "robot.h"
 #include <strsafe.h>
-
+#include "Path.h"
 
 Robot::Robot() :
 	BaseLogger("Robot"),
@@ -18,15 +18,17 @@ Robot::Robot() :
 	m_State.isCalibrating = false;
 	m_State.tsWindows = -1;
 	m_Params.isArActionLimiterForwardsEnabled = true;
+	m_Params.controlMode = 0;
 
+	m_Params.desiredDistance = 1.5;
 	m_Params.VmDistance = 2.5;
 	m_Params.VmHeading = 0;
 	m_Params.vScale = 1.2;
 	m_Params.wScale = 0.3;
+	m_Params.kSatPath = 0.3;
+	m_Params.kPath = 1.0;
 
-	float theta = m_State.th + m_Params.VmHeading;
-	m_VisualCmd.xVmGoal = m_State.x + m_Params.VmDistance * cos(theta);
-	m_VisualCmd.yVmGoal = m_State.y;
+	resetVmGoal();
 
 	m_ControlCmd.v = 0.0;
 	m_ControlCmd.w = 0.0;
@@ -134,7 +136,7 @@ bool Robot::init(HWND hWnd)
 	// If the robot has an Analog Gyro, this object will activate it, and 
 	// if the robot does not automatically use the gyro to correct heading,
 	// this object reads data from it and corrects the pose in ArRobot
-	m_pGyro = new ArAnalogGyro(m_pArRobot);
+	//m_pGyro = new ArAnalogGyro(m_pArRobot); // to-do: add a gyro switch in config
 
 	m_pArRobot->enableMotors();
 
@@ -149,6 +151,10 @@ void Robot::setParams(Config * pConfig)
 	pConfig->assign("VmHeading", m_Params.VmHeading);
 	pConfig->assign("vScale", m_Params.vScale);
 	pConfig->assign("wScale", m_Params.wScale);
+	pConfig->assign("controlMode", m_Params.controlMode);
+	pConfig->assign("desiredDistance", m_Params.desiredDistance);
+	pConfig->assign("kSatPath", m_Params.kSatPath);
+	pConfig->assign("kPath", m_Params.kPath);
 
 	std::string StrRobotPort;
 	pConfig->assign("robotPort", StrRobotPort);
@@ -158,6 +164,7 @@ void Robot::setParams(Config * pConfig)
 	if (m_Params.isArActionLimiterForwardsEnabled) m_pActionLimiterForwards->setParameters();
 	else m_pActionLimiterForwards->setParameters(1.0, 1.0, 2000.0, 0.1);
 	
+	resetVmGoal();
 
 	m_pActionFollow->setParams(pConfig);
 }
@@ -176,14 +183,16 @@ void Robot::log(bool bHeader) const
 	conditionalLog("isFollowing", m_State.isFollowing, bHeader);
 	conditionalLog("xVm", m_State.xVm, bHeader);
 	conditionalLog("yVm", m_State.yVm, bHeader);
+	conditionalLog("dist", m_State.dist, bHeader);
 	conditionalLog("xVmG", m_VisualCmd.xVmGoal, bHeader);
 	conditionalLog("yVmG", m_VisualCmd.yVmGoal, bHeader);
 	conditionalLog("vD", m_ControlCmd.v, bHeader);
 	conditionalLog("wD", m_ControlCmd.w, bHeader);
-	conditionalLog("dVmG", m_Params.VmDistance, bHeader);
-	conditionalLog("hVmG", m_Params.VmHeading, bHeader);
+	conditionalLog("distVm", m_Params.VmDistance, bHeader);
+	conditionalLog("headVm", m_Params.VmHeading, bHeader);
 	conditionalLog("vScale", m_Params.vScale, bHeader);
 	conditionalLog("wScale", m_Params.wScale, bHeader);
+	conditionalLog("distDesired", m_Params.desiredDistance, bHeader);
 	logEOL();
 }
 
@@ -195,6 +204,7 @@ void Robot::updateState() // To do: add mutex.
 
 	ArPose Pose;
 	Pose = m_pArRobot->getPose();
+	m_State.dist += pow(pow(Pose.getX() / 1000.0 - m_State.x, 2) + pow(Pose.getY() / 1000.0 - m_State.y, 2), 0.5);
 	m_State.x = Pose.getX() / 1000.0;
 	m_State.y = Pose.getY() / 1000.0;
 	m_State.th = Pose.getTh() * M_PI / 180.0;
@@ -261,22 +271,16 @@ bool Robot::toggleCalibration()
 
 void Robot::updateVisualCmd(float x, float z)
 {
-	//m_pArRobot->lock();
-
 	m_VisualCmd.tsWindows = GetTickCount64();
 
-	if (z < 0.01)
-		z = m_Params.VmDistance;
-	
-	// This condition should be easily satisfied since SIP packets arrive every 100 ms
-	//if (m_VisualCmd.tsWindows - m_State.tsWindows < 150)
-	{
+	if (m_Params.controlMode == 0) {
 		float theta = m_State.th + m_Params.VmHeading;
-		m_VisualCmd.xVmGoal = m_State.x + z * cos(theta) - x * sin(theta);
-		m_VisualCmd.yVmGoal = m_State.y + z * sin(theta) + x * cos(theta);
+		m_VisualCmd.xVmGoal = m_State.xVm + (m_Params.desiredDistance - z) * cos(theta) - x * sin(theta);
+		m_VisualCmd.yVmGoal = m_State.yVm + (m_Params.desiredDistance - z) * sin(theta) + x * cos(theta);
 	}
-
-	//m_pArRobot->unlock();
+	else if (m_Params.controlMode == 1) {
+		;
+	}
 }
 
 void Robot::updateControlParams(float VmDistance, float VmHeading, float vScale, float wScale)
@@ -303,25 +307,72 @@ bool Robot::isVisualCmdTooOld()
 
 void Robot::calcControl(float * pV, float * pW, float * pTh)
 {
-	//m_pArRobot->lock();
+	if (m_Params.controlMode == 0) {
+		// Move to let the virtual marker approach the goal marker.
+#if 1
+		float xToGoal, yToGoal;
+		float distanceToGoal, headingOfGoal;
+		const float tolerance = 0.1;
+		xToGoal = m_State.xVm - m_VisualCmd.xVmGoal;
+		yToGoal = m_State.yVm - m_VisualCmd.yVmGoal;
 
-	float xToGoal, yToGoal;
-	float distanceToGoal, headingOfGoal;
-	xToGoal = m_VisualCmd.xVmGoal - m_State.x;
-	yToGoal = m_VisualCmd.yVmGoal - m_State.y;
+		distanceToGoal = sqrt(pow(xToGoal, 2) + pow(yToGoal, 2));
 
-	distanceToGoal = sqrt(pow(xToGoal, 2) + pow(yToGoal, 2)) - m_Params.VmDistance;
+		if (distanceToGoal > tolerance) {
+			m_ControlCmd.v = m_Params.vScale * (xToGoal * cos(m_State.th) + yToGoal * sin(m_State.th));
+			m_ControlCmd.w = m_Params.wScale / m_Params.VmDistance *
+				(-xToGoal * sin(m_State.th) + yToGoal * cos(m_State.th));
+		}
+		else {
+			m_ControlCmd.v = 0;
+			m_ControlCmd.w = 0;
+		}
+		if (pV != NULL) *pV = m_ControlCmd.v;
+		if (pW != NULL) *pW = m_ControlCmd.w;
+		if (pTh != NULL) *pTh = atan2(yToGoal, xToGoal);
+#else
 
+		float xToGoal, yToGoal;
+		float distanceToGoal, headingOfGoal;
+		xToGoal = m_VisualCmd.xVmGoal - m_State.x;
+		yToGoal = m_VisualCmd.yVmGoal - m_State.y;
+
+		distanceToGoal = sqrt(pow(xToGoal, 2) + pow(yToGoal, 2)) - m_Params.VmDistance;
+
+		float theta = m_State.th + m_Params.VmHeading;
+		headingOfGoal = atan2(yToGoal, xToGoal) - theta;
+		while (headingOfGoal > M_PI) headingOfGoal -= 2 * M_PI;
+		while (headingOfGoal < -M_PI) headingOfGoal += 2 * M_PI;
+
+		m_ControlCmd.v = m_Params.vScale * distanceToGoal;
+		if (pV != NULL) *pV = m_ControlCmd.v;
+		m_ControlCmd.w = m_Params.wScale * headingOfGoal;
+		if (pW != NULL) *pW = m_ControlCmd.w;
+		if (pTh != NULL) *pTh = atan2(yToGoal, xToGoal);
+
+#endif
+	}
+	else if (m_Params.controlMode == 1){
+		// Follows a path
+		double vd = 0.15; // needs rewrite
+		geometry_msgs::Pose *pPoseDesired = m_Path.getPoseOnPath(m_State.dist);
+		double thDesired = asin(pPoseDesired->orientation.z) * 2;
+		double xError = pPoseDesired->position.x - m_State.x;
+		double yError = pPoseDesired->position.y - m_State.y;
+		double vx = vd * cos(thDesired) + m_Params.kSatPath * tanh(m_Params.kPath * xError / m_Params.kSatPath);
+		double vy = vd * sin(thDesired) + m_Params.kSatPath * tanh(m_Params.kPath * yError / m_Params.kSatPath);
+		m_ControlCmd.v = vx * cos(m_State.th) + vy * sin(m_State.th);
+		m_ControlCmd.w = -vx * sin(m_State.th) / m_Params.VmDistance + vy * cos(m_State.th) / m_Params.VmDistance;
+		if (pV != NULL) *pV = m_ControlCmd.v;
+		if (pW != NULL) *pW = m_ControlCmd.w;
+	}
+}
+
+void Robot::resetVmGoal()
+{
 	float theta = m_State.th + m_Params.VmHeading;
-	headingOfGoal = atan2(yToGoal, xToGoal) - theta;
-	while (headingOfGoal > M_PI) headingOfGoal -= 2 * M_PI;
-	while (headingOfGoal < -M_PI) headingOfGoal += 2 * M_PI;
-
-	*pV = m_ControlCmd.v = m_Params.vScale * distanceToGoal;
-	*pW = m_ControlCmd.w = m_Params.wScale * headingOfGoal;
-	*pTh = atan2(yToGoal, xToGoal);
-
-	//m_pArRobot->unlock();
+	m_VisualCmd.xVmGoal = m_State.x + m_Params.VmDistance * cos(theta);
+	m_VisualCmd.yVmGoal = m_State.y + m_Params.VmDistance * sin(theta);
 }
 
 void Robot::setCalibRobotLogging(bool bCalib)

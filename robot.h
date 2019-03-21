@@ -5,6 +5,7 @@
 #include <fstream>
 #include "stdafx.h"
 #include "BaseLogger.h"
+#include "Path.h"
 
 #define ROBOT_USE_ACTIONS
 //#define ROBOT_USE_MOTION_COMMAND_FUNCTIONS
@@ -19,6 +20,7 @@ typedef struct RobotState_ {
 	float			w; // rad/sec
 	float			batteryVolt;
 	float			areMotorsEnabled;
+	float			dist; // meter
 
 	float			xVm; // Virtual marker's x position in World frame
 	float			yVm; // Virtual marker's y position in World frame
@@ -40,12 +42,19 @@ typedef struct VisualCmd_ {
 
 typedef struct ControlParams_ {
 	float			VmDistance;	// Virtual marker's distance to the robot, in meters.
-	float			VmHeading;	// The heading of the vector pointing from the center of
-								// the robot and to the virtual marker, in radians.
+	float			VmHeading;	// The heading of the vector pointing from the reference point of
+								// the robot to the virtual marker, in radians, 
+								// relative to the heading of the robot.
 	float			vScale;
 	float			wScale;
 
+	float			desiredDistance;
+	int				controlMode; //
+
 	bool			isArActionLimiterForwardsEnabled;
+
+	float			kSatPath; // for path following control
+	float			kPath;
 } ControlParams, *pControlParams;
 
 typedef struct ControlCmd_ {
@@ -71,6 +80,7 @@ protected:
 	ActionFollow*				m_pActionFollow;
 	ArActionLimiterForwards*    m_pActionLimiterForwards;
 	HWND						m_hWnd;
+	BodyTracker::Path			m_Path;
 public:
 public:
 	Robot();
@@ -94,7 +104,10 @@ public:
 	void updateControlParams(const float * params);
 
 	bool isVisualCmdTooOld();
-	void calcControl(float * pV, float * pW, float * pTh);
+	void calcControl(float * pV = NULL, float * pW = NULL, float * pTh = NULL);
+
+	// Initialize the virtual marker to where it would generate zero robot action/movement
+	void resetVmGoal();
 
 	void setCalibRobotLogging(bool bCalib);
 	

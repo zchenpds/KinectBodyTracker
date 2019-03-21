@@ -2,9 +2,15 @@ ros_master=192.168.1.15:11411
 
 robotPort=COM3
 
-VmDistance=3.2
-VmHeading=3.1415927
-vScale=-3.2
+desiredDistance=2.2
+
+VmDistance=0.3
+VmHeading=0
+vScale=-0.8
 wScale=0.5
+kSatPath=0.3
+kPath=1.0
+
+controlMode=1
 
 isArActionLimiterForwardsEnabled=false

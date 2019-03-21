@@ -23,6 +23,7 @@
     <ClCompile Include="BodyBasics.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ActionFollow.cpp" />
+    <ClCompile Include="Path.cpp" />
     <ClCompile Include="robot.cpp" />
     <ClCompile Include="RosPublisher.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\duration.cpp" />
@@ -41,6 +42,7 @@
     <ClInclude Include="BodyBasics.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ActionFollow.h" />
+    <ClInclude Include="Path.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="robot.h" />
     <ClInclude Include="RosPublisher.h" />
