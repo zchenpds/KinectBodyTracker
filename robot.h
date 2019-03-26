@@ -80,13 +80,13 @@ protected:
 	ActionFollow*				m_pActionFollow;
 	ArActionLimiterForwards*    m_pActionLimiterForwards;
 	HWND						m_hWnd;
-	BodyTracker::Path			m_Path;
+	BodyTracker::BasePath*		m_pPath;
 public:
 public:
 	Robot();
 	~Robot();
 	bool init(HWND hWnd);
-	void setParams(Config * pConfig);
+	void setParams();
 	void log(bool bHeader = false) const override;
 	void updateState();
 	pcRobotState getState();

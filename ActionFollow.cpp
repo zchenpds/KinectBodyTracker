@@ -64,6 +64,7 @@ void ActionFollow::setRobot(ArRobot * pArRobot)
 	}
 }
 
-void ActionFollow::setParams(Config * pConfig)
+void ActionFollow::setParams()
 {
+	//Config* pConfig = Config::Instance();
 }

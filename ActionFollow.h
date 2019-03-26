@@ -17,7 +17,7 @@ public:
 	// Sets the robot pointer, also gets the sonar device, or deactivates this action if there is no sonar.
 	virtual void setRobot(ArRobot * pArRobot);
 	// Updates params
-	void setParams(Config * pConfig);
+	void setParams();
 protected:
 	Robot*				m_pRobot;
 	//ArRobot*			m_pArRobot;

@@ -14,3 +14,7 @@ kPath=1.0
 controlMode=1
 
 isArActionLimiterForwardsEnabled=false
+
+pathType=PathEight
+PathEight/half_dist_circle=1.0
+PathEight/radius=0.2

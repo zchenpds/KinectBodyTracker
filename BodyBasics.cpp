@@ -70,7 +70,6 @@ CBodyBasics::CBodyBasics() :
     m_pBrushHandOpen(NULL),
     m_pBrushHandLasso(NULL),
 	m_pRosPublisher(NULL),
-	m_pConfig(NULL),
 	m_pRobot(NULL),
 	m_pSyncSocket(NULL)
 {
@@ -82,11 +81,9 @@ CBodyBasics::CBodyBasics() :
 	
 	//*m_pKinectFile << "123" << std::endl; // Test write
 
-	m_pConfig = new Config();
 	m_pSyncSocket = new SyncSocket();
 	m_pRobot = new Robot();
 
-	m_pConfig->load();
 	setParams();
 
 	ZeroMemory(&m_JointData, sizeof(m_JointData));
@@ -110,7 +107,6 @@ CBodyBasics::~CBodyBasics()
 {
 	delete m_pRobot;
 	delete m_pSyncSocket;
-	delete m_pConfig;
 	//delete m_pRosPublisher;
 		
 
@@ -256,7 +252,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
 void CBodyBasics::setParams()
 {
-	m_pRobot->setParams(m_pConfig);
+	m_pRobot->setParams();
 }
 
 void CBodyBasics::log(bool bHeader) const
@@ -427,7 +423,7 @@ void CBodyBasics::calibrate()
 		}
 		
 		// Recover control parameters
-		m_pRobot->setParams(m_pConfig);
+		m_pRobot->setParams();
 
 		// State transition
 		m_pCalibState = CS_Inactive;
@@ -632,10 +628,10 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				else if (m_hWndButtonLoad == hButton)
 				{
 					// Load button
-					m_pConfig->load();
-					m_pConfig->resetCounter();
+					Config::Instance()->load();
+					Config::resetCounter();
 					setParams();
-					int cnt = m_pConfig->getUpdateCount();
+					int cnt = Config::getUpdateCount();
 					TCHAR pszText[32];
 					StringCchPrintf(pszText, 32, L"%d parameter%s updated.", cnt, cnt > 1 ? L"s" : L"");
 					SetWindowText(m_hWndStatic, pszText);

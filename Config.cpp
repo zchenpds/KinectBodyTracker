@@ -1,20 +1,27 @@
+//#include "pch.h"
 #include "Config.h"
 
 #include <fstream>
 #include <string>
 #include <sstream>
 
+// Initialization of static variables.
+Config* Config::m_pInstance = nullptr;
+int Config::m_countUpdates = 0;
 
-
-Config::Config(const std::string & fileName):
-	m_countUpdates(0)
+/** This function is called to create an instance of the class.
+    Calling the constructor publicly is not allowed. The constructor
+    is private and is only called by this Instance function.
+*/
+Config* Config::Instance(const std::string & fileName)
 {
-	load(fileName);
+	if (!m_pInstance) {
+		m_pInstance = new Config;
+		m_pInstance->load(fileName);
+	}
+	return m_pInstance;
 }
 
-Config::~Config()
-{
-}
 
 void Config::load(const std::string & fileName)
 {
@@ -63,6 +70,24 @@ bool Config::assign(const std::string & strKey, float & fValue)
 	else
 	{
 		float fValueNew = stof(m_mapParams[strKey]);
+		if (fValue != fValueNew)
+		{
+			m_countUpdates++;
+			fValue = fValueNew;
+		}
+		return true; // Succeeded in assigning the config parameter
+	}
+}
+
+bool Config::assign(const std::string & strKey, double & fValue)
+{
+	ConfigParams::iterator it;
+	it = m_mapParams.find(strKey);
+	if (it == m_mapParams.end())
+		return false; // Failed to find the parameter.
+	else
+	{
+		double fValueNew = stof(m_mapParams[strKey]);
 		if (fValue != fValueNew)
 		{
 			m_countUpdates++;

@@ -11,7 +11,8 @@ Robot::Robot() :
 	m_pParser(NULL),
 	m_pActionFollow(NULL),
 	m_pActionLimiterForwards(NULL),
-	m_hWnd(NULL)
+	m_hWnd(NULL),
+	m_pPath(NULL) // will not be instantiated until the first time setParams() is invoked
 {
 	ZeroMemory(&m_State, sizeof(m_State));
 	m_State.isFollowing = false;
@@ -76,6 +77,7 @@ Robot::~Robot()
 	delete m_pParser;
 	delete m_pActionFollow;
 	delete m_pActionLimiterForwards;
+	delete m_pPath;
 }
 
 bool Robot::init(HWND hWnd)
@@ -145,8 +147,9 @@ bool Robot::init(HWND hWnd)
 	return true; // init is successful
 }
 
-void Robot::setParams(Config * pConfig)
+void Robot::setParams()
 {
+	Config* pConfig = Config::Instance();
 	pConfig->assign("VmDistance", m_Params.VmDistance);
 	pConfig->assign("VmHeading", m_Params.VmHeading);
 	pConfig->assign("vScale", m_Params.vScale);
@@ -166,7 +169,24 @@ void Robot::setParams(Config * pConfig)
 	
 	resetVmGoal();
 
-	m_pActionFollow->setParams(pConfig);
+	m_pActionFollow->setParams();
+
+	// Determine the type of path
+	std::string pathType("PathEight");
+	pConfig->assign("pathType", pathType);
+	if (!m_pPath || pathType.compare(m_pPath->getType())!=0) {
+		if (m_pPath) {
+			// if the current path is different from that specified in Config.txt
+			delete m_pPath;
+			m_pPath = nullptr;
+		}
+		if (pathType.compare("PathEight") == 0)
+			m_pPath = new BodyTracker::PathEight();
+		else
+			throw "Unknown path specified.";
+	}
+
+	m_pPath->setParams();
 }
 
 void Robot::log(bool bHeader) const
@@ -355,7 +375,7 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 	else if (m_Params.controlMode == 1){
 		// Follows a path
 		double vd = 0.15; // needs rewrite
-		geometry_msgs::Pose *pPoseDesired = m_Path.getPoseOnPath(m_State.dist);
+		geometry_msgs::Pose *pPoseDesired = m_pPath->getPoseOnPath(m_State.dist);
 		double thDesired = asin(pPoseDesired->orientation.z) * 2;
 		double xError = pPoseDesired->position.x - m_State.x;
 		double yError = pPoseDesired->position.y - m_State.y;

@@ -2,34 +2,18 @@
 #include "Path.h"
 #include <tf\tf.h>
 #include <math.h>
+#include "Config.h"
 
 namespace BodyTracker {
 
-	Path::Path()
-	{
-		half_dist_circle = 1.4;
-		radius = 0.8;
-		// Check validity of the parameters;
-		if (radius > half_dist_circle) {
-			// Parameter radius cannot exceed half_dist_circle! Setting radius to half_dist_circle.
-			radius = half_dist_circle;
-		}
-		alpha = asin(radius / half_dist_circle);
-		straight_part_len = radius / tan(alpha);
-		turn_angle = M_PI + 2 * alpha;
-		curved_part_len = radius * turn_angle;
-		circumference = straight_part_len * 4 + curved_part_len * 2;
+	// *** BasePath implementation ***
 
+	BasePath::BasePath(): circumference(0)
+	{
 		setPathPose(0, 0, 0);
-
 	}
 
-
-	Path::~Path()
-	{
-	}
-
-	void Path::setPathPose(double x, double y, double th)
+	void BasePath::setPathPose(double x, double y, double th)
 	{
 		m_PathPose.position.x = x;
 		m_PathPose.position.y = y;
@@ -42,7 +26,34 @@ namespace BodyTracker {
 		m_PathPose.orientation.w = quatDesired.w;
 	}
 
-	geometry_msgs::Pose * Path::getPoseOnPath(double dist)
+	void BasePath::setPathPose(geometry_msgs::Pose * pPathPose)
+	{
+		setPathPose(pPathPose->position.x, pPathPose->position.y, pPathPose->orientation.z);
+	}
+
+	double BasePath::getCircumference() const
+	{
+		if (circumference > 0)
+			return circumference;
+		else
+			throw "Path circurmference is unset.";
+	}
+
+	// *** PathEight implementation ***
+
+	PathEight::PathEight() : BasePath()
+	{
+		setParams();
+	}
+
+
+	PathEight::~PathEight()
+	{
+	}
+
+	
+
+	geometry_msgs::Pose * PathEight::getPoseOnPath(double dist)
 	{
 		double x, y, th, x0, y0, th0;
 		x0 = m_PathPose.position.x;
@@ -102,9 +113,32 @@ namespace BodyTracker {
 		return &m_PoseDesired;
 	}
 
-	double Path::getCircumference()
+	void PathEight::setParams()
 	{
-		return circumference;
+		Config* pConfig = Config::Instance();
+		half_dist_circle = 1.4;
+		pConfig->assign("PathEight/half_dist_circle", half_dist_circle);
+		radius = 0.8;
+		pConfig->assign("PathEight/radius", radius);
+
+		// Check validity of the parameters;
+		if (radius > half_dist_circle) {
+			// Parameter radius cannot exceed half_dist_circle! Setting radius to half_dist_circle.
+			radius = half_dist_circle;
+		}
+		alpha = asin(radius / half_dist_circle);
+		straight_part_len = radius / tan(alpha);
+		turn_angle = M_PI + 2 * alpha;
+		curved_part_len = radius * turn_angle;
+		circumference = straight_part_len * 4 + curved_part_len * 2;
 	}
+
+	std::string PathEight::getType() const
+	{
+		return std::string("PathEight");
+	}
+
+
+	
 
 };

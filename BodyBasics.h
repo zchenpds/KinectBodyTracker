@@ -152,7 +152,6 @@ private:
 
 	// ROS Publisher
 	RosPublisher*			m_pRosPublisher;
-	Config*					m_pConfig;
 
 	//
 	// Define the states of a finite state machine
