@@ -1,20 +1,26 @@
 ros_master=192.168.1.15:11411
+dataPath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190320\
 
 robotPort=COM3
 
-desiredDistance=2.2
+desiredDistance=2.1
 
 VmDistance=0.3
 VmHeading=0
 vScale=-0.8
 wScale=0.5
+
 kSatPath=0.3
 kPath=1.0
 
-controlMode=1
+kSatRho=0.5
+kRho=1.0
+desiredPathSpeed=0.3
+
+controlMode=2
 
 isArActionLimiterForwardsEnabled=false
 
 pathType=PathEight
-PathEight/half_dist_circle=1.0
-PathEight/radius=0.2
+PathEight/half_dist_circle=1.3
+PathEight/radius=0.7

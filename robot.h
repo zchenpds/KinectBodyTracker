@@ -38,6 +38,9 @@ typedef struct VisualCmd_ {
 	float			xVmGoal; // Virtual marker's goal position in World frame
 	float			yVmGoal; // Virtual marker's goal position in World frame
 	INT64			tsWindows; // return of GetTickCount64()
+	float			rhoTilde; // The desired value minus the actual value of the human follower's distance
+	float			rhoDot; // The rate of change of human follower's distance
+	float			psiR; // The angle between the robot heading vector and the vector pointing from the human to the robot
 } VisualCmd, *pVisualCmd;
 
 typedef struct ControlParams_ {
@@ -55,6 +58,10 @@ typedef struct ControlParams_ {
 
 	float			kSatPath; // for path following control
 	float			kPath;
+
+	float			kSatRho;
+	float			kRho;
+	float			desiredPathSpeed;	
 } ControlParams, *pControlParams;
 
 typedef struct ControlCmd_ {
@@ -87,6 +94,7 @@ public:
 	~Robot();
 	bool init(HWND hWnd);
 	void setParams();
+	int getControlMode();
 	void log(bool bHeader = false) const override;
 	void updateState();
 	pcRobotState getState();
@@ -107,9 +115,11 @@ public:
 	void calcControl(float * pV = NULL, float * pW = NULL, float * pTh = NULL);
 
 	// Initialize the virtual marker to where it would generate zero robot action/movement
-	void resetVmGoal();
+	void resetVisualCmd();
 
 	void setCalibRobotLogging(bool bCalib);
+
+	void recordDesiredPath() const;
 	
 };
 

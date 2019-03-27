@@ -13,7 +13,6 @@ private:
 	geometry_msgs::Twist    twist_msg;
 	ros::Publisher          cmd_vel_pub;
 	char*                   m_pszRosMaster;
-	Config*                 m_pConfig;
 
 };
 

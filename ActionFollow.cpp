@@ -32,7 +32,7 @@ ArActionDesired *ActionFollow::fire(ArActionDesired currentDesired)
 	if (pcState->isFollowing || pcState->isCalibrating)
 	{
 		m_ActionDesired.setVel(v * 1000.0);
-		m_ActionDesired.setRotVel(w * 180.0 / M_PI);
+		m_ActionDesired.setRotVel(w * 180.0 / M_PI*1.25);
 		//m_ActionDesired.setHeading(th * 180.0 / M_PI);
 	}
 	else

@@ -6,11 +6,16 @@ class BaseLogger
 {
 private:
 	std::ofstream *m_pDataFile;
+protected:
+	static std::string s_strDataPath;
 public:
 	// Constructor of BaseLogger
 	// Argument "name" is suffixed to the file name.
-	BaseLogger(const char * name);
+	BaseLogger();
 	~BaseLogger();
+
+	// This function must be called before log() can be invoked.
+	void openDataFile(const char * name);
 protected:
 	// This function must be implemented in the derived class
 	// because what to be logged in unkown in this base class.

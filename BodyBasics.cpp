@@ -41,15 +41,22 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    CBodyBasics application;
-    application.Run(hInstance, nShowCmd);
+	try {
+		CBodyBasics application;
+		application.Run(hInstance, nShowCmd);
+	}
+	catch (const char * pszMessage) {
+		std::cout << pszMessage;
+
+	}
+    
 }
 
 /// <summary>
 /// Constructor
 /// </summary>
 CBodyBasics::CBodyBasics() :
-	BaseLogger("Kinect"),
+	BaseLogger(),
 	m_pCalibState(CS_Inactive),
     m_hWnd(NULL),
     m_nStartTime(0),
@@ -80,6 +87,9 @@ CBodyBasics::CBodyBasics() :
     }
 	
 	//*m_pKinectFile << "123" << std::endl; // Test write
+	
+	Config::Instance()->assign("dataPath", s_strDataPath);
+	
 
 	m_pSyncSocket = new SyncSocket();
 	m_pRobot = new Robot();
@@ -95,6 +105,8 @@ CBodyBasics::CBodyBasics() :
 		m_JointData.names[i++] = std::string(jt.second) + "Y";
 		m_JointData.names[i++] = std::string(jt.second) + "Z";
 	}
+
+	openDataFile("Kinect");
 	log(true); //log header
 	
 }
@@ -820,31 +832,40 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 					cnt++;
 				}
 			}
+
+			// updateVisualCmd
+			if (m_pRobot->getControlMode() == 0) {
+				// This mode allows for gesture-based heading control
+				if (joints[JointType_HandTipLeft].Position.Y > 0.6 && joints[JointType_HandTipRight].Position.Y > 0.6)
+				{
+					// Stop
+					m_pRobot->updateVisualCmd(0, 0);
+				}
+				else if (joints[JointType_HandTipLeft].Position.Y > 0.6)
+				{
+					// Adjust Heading
+					m_pRobot->updateVisualCmd(
+						saturate(joints[JointType_HandTipLeft].Position.X - pxSum / cnt, -0.5f, 0.5f),
+						pzSum / cnt);
+				}
+				else if (joints[JointType_HandTipRight].Position.Y > 0.6)
+				{
+					// Adjust Heading
+					m_pRobot->updateVisualCmd(
+						saturate(joints[JointType_HandTipRight].Position.X - pxSum / cnt, -0.5f, 0.5f),
+						pzSum / cnt);
+				}
+				else
+				{
+					//m_pRobot->updateVisualCmd(pxSum / cnt, pzSum / cnt);
+					m_pRobot->updateVisualCmd(0, pzSum / cnt);
+				}
+			}
+			else {
+				// In this mode, the visual command is used only for distance keeping purposes.
+				m_pRobot->updateVisualCmd(pxSum / cnt, pzSum / cnt);
+			}
 			
-			if (joints[JointType_HandTipLeft].Position.Y > 0.6 && joints[JointType_HandTipRight].Position.Y > 0.6)
-			{
-				// Stop
-				m_pRobot->updateVisualCmd(0, 0);
-			}
-			else if(joints[JointType_HandTipLeft].Position.Y > 0.6)
-			{
-				// Adjust Heading
-				m_pRobot->updateVisualCmd(
-					saturate(joints[JointType_HandTipLeft].Position.X - pxSum / cnt, -0.5f, 0.5f), 
-					pzSum / cnt);
-			}
-			else if (joints[JointType_HandTipRight].Position.Y > 0.6)
-			{
-				// Adjust Heading
-				m_pRobot->updateVisualCmd(
-					saturate(joints[JointType_HandTipRight].Position.X - pxSum / cnt, -0.5f, 0.5f), 
-					pzSum / cnt);
-			}
-			else
-			{
-				//m_pRobot->updateVisualCmd(pxSum / cnt, pzSum / cnt);
-				m_pRobot->updateVisualCmd(0, pzSum / cnt);
-			}
 			
 			// Get data ready for recording
 			m_JointData.tsWindows = GetTickCount64(); // For now not to be logged.

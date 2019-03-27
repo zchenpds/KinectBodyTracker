@@ -3,7 +3,7 @@
 #include "Path.h"
 
 Robot::Robot() :
-	BaseLogger("Robot"),
+	BaseLogger(),
 	m_pArRobot(NULL),
 	m_pRobotConn(NULL),
 	m_pArgs(NULL),
@@ -26,10 +26,15 @@ Robot::Robot() :
 	m_Params.VmHeading = 0;
 	m_Params.vScale = 1.2;
 	m_Params.wScale = 0.3;
+
 	m_Params.kSatPath = 0.3;
 	m_Params.kPath = 1.0;
 
-	resetVmGoal();
+	m_Params.kSatRho = 0.5;
+	m_Params.kRho = 1.0;
+	m_Params.desiredPathSpeed = 0.15;
+
+	resetVisualCmd();
 
 	m_ControlCmd.v = 0.0;
 	m_ControlCmd.w = 0.0;
@@ -61,6 +66,7 @@ Robot::Robot() :
 	m_pActionLimiterForwards = new ArActionLimiterForwards();
 
 	// log heading of the csv file
+	openDataFile("Robot");
 	log(true);
 }
 
@@ -158,6 +164,9 @@ void Robot::setParams()
 	pConfig->assign("desiredDistance", m_Params.desiredDistance);
 	pConfig->assign("kSatPath", m_Params.kSatPath);
 	pConfig->assign("kPath", m_Params.kPath);
+	pConfig->assign("kSatRho", m_Params.kSatRho);
+	pConfig->assign("kRho", m_Params.kRho);
+	pConfig->assign("desiredPathSpeed", m_Params.desiredPathSpeed);
 
 	std::string StrRobotPort;
 	pConfig->assign("robotPort", StrRobotPort);
@@ -167,7 +176,7 @@ void Robot::setParams()
 	if (m_Params.isArActionLimiterForwardsEnabled) m_pActionLimiterForwards->setParameters();
 	else m_pActionLimiterForwards->setParameters(1.0, 1.0, 2000.0, 0.1);
 	
-	resetVmGoal();
+	resetVisualCmd();
 
 	m_pActionFollow->setParams();
 
@@ -180,13 +189,19 @@ void Robot::setParams()
 			delete m_pPath;
 			m_pPath = nullptr;
 		}
-		if (pathType.compare("PathEight") == 0)
+		if (pathType.compare("PathEight") == 0) {
 			m_pPath = new BodyTracker::PathEight();
+		}
 		else
 			throw "Unknown path specified.";
 	}
 
 	m_pPath->setParams();
+}
+
+int Robot::getControlMode()
+{
+	return m_Params.controlMode;
 }
 
 void Robot::log(bool bHeader) const
@@ -224,7 +239,7 @@ void Robot::updateState() // To do: add mutex.
 
 	ArPose Pose;
 	Pose = m_pArRobot->getPose();
-	m_State.dist += pow(pow(Pose.getX() / 1000.0 - m_State.x, 2) + pow(Pose.getY() / 1000.0 - m_State.y, 2), 0.5);
+	// m_State.dist += pow(pow(Pose.getX() / 1000.0 - m_State.x, 2) + pow(Pose.getY() / 1000.0 - m_State.y, 2), 0.5);
 	m_State.x = Pose.getX() / 1000.0;
 	m_State.y = Pose.getY() / 1000.0;
 	m_State.th = Pose.getTh() * M_PI / 180.0;
@@ -237,9 +252,23 @@ void Robot::updateState() // To do: add mutex.
 	ArTime Time = m_pArRobot->getLastOdometryTime();
 	m_State.tsRobot = Time.getSecLL() * 1000ll + Time.getMSecLL();
 
-	m_State.xVm = m_State.x + m_Params.VmDistance * cos(m_State.th + m_Params.VmHeading);
-	m_State.yVm = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);
+	float xVmNew = m_State.x + m_Params.VmDistance * cos(m_State.th + m_Params.VmHeading);
+	float yVmNew = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);
 
+	static bool is_first = true;
+	if (is_first) {
+		m_pPath->setPathPose(xVmNew, yVmNew, 0);
+		resetVisualCmd();
+		recordDesiredPath();
+		is_first = false;
+	}
+	else {
+		m_State.dist += pow(pow(xVmNew - m_State.xVm, 2) + pow(yVmNew - m_State.yVm, 2), 0.5);
+	}
+
+	m_State.xVm = xVmNew;
+	m_State.yVm = yVmNew;
+	
 	log();
 	//m_pArRobot->unlock();
 }
@@ -298,8 +327,10 @@ void Robot::updateVisualCmd(float x, float z)
 		m_VisualCmd.xVmGoal = m_State.xVm + (m_Params.desiredDistance - z) * cos(theta) - x * sin(theta);
 		m_VisualCmd.yVmGoal = m_State.yVm + (m_Params.desiredDistance - z) * sin(theta) + x * cos(theta);
 	}
-	else if (m_Params.controlMode == 1) {
-		;
+	else if (m_Params.controlMode == 2) {
+		m_VisualCmd.psiR = atan2(fabs(x), z);
+		m_VisualCmd.rhoDot = 0.0f;
+		m_VisualCmd.rhoTilde = m_Params.desiredDistance - z;
 	}
 }
 
@@ -372,13 +403,25 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 
 #endif
 	}
-	else if (m_Params.controlMode == 1){
+	else if (m_Params.controlMode == 1 || m_Params.controlMode == 2){
 		// Follows a path
-		double vd = 0.15; // needs rewrite
+		static double vd = 0.15;
+		if (m_Params.controlMode == 1) {
+			// Constant vd
+			vd = m_Params.desiredPathSpeed;
+		}
+		else if (m_Params.controlMode == 2) {
+			// vd is determined by the state of the human follower
+			vd += ( m_VisualCmd.rhoDot + m_Params.kSatRho * tanh(m_Params.kRho * m_VisualCmd.rhoTilde / m_Params.kSatRho) )
+				/ cos(m_VisualCmd.psiR);
+			if (vd > 0.7) vd = 0.7;
+			if (vd < 0.0) vd = 0.0;
+		}
+		
 		geometry_msgs::Pose *pPoseDesired = m_pPath->getPoseOnPath(m_State.dist);
 		double thDesired = asin(pPoseDesired->orientation.z) * 2;
-		double xError = pPoseDesired->position.x - m_State.x;
-		double yError = pPoseDesired->position.y - m_State.y;
+		double xError = pPoseDesired->position.x - m_State.xVm;
+		double yError = pPoseDesired->position.y - m_State.yVm;
 		double vx = vd * cos(thDesired) + m_Params.kSatPath * tanh(m_Params.kPath * xError / m_Params.kSatPath);
 		double vy = vd * sin(thDesired) + m_Params.kSatPath * tanh(m_Params.kPath * yError / m_Params.kSatPath);
 		m_ControlCmd.v = vx * cos(m_State.th) + vy * sin(m_State.th);
@@ -388,14 +431,35 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 	}
 }
 
-void Robot::resetVmGoal()
+void Robot::resetVisualCmd()
 {
 	float theta = m_State.th + m_Params.VmHeading;
 	m_VisualCmd.xVmGoal = m_State.x + m_Params.VmDistance * cos(theta);
 	m_VisualCmd.yVmGoal = m_State.y + m_Params.VmDistance * sin(theta);
+
+	m_VisualCmd.rhoTilde = 0.0f;
+	m_VisualCmd.rhoDot = 0.0f;
+	m_VisualCmd.psiR = 0.0f;
 }
 
 void Robot::setCalibRobotLogging(bool bCalib)
 {
 	m_State.isCalibrating = bCalib;
+}
+
+void Robot::recordDesiredPath() const
+{
+	std::ofstream ofs;
+	s_strDataPath;
+	ofs.open(s_strDataPath + "desiredPath.m", std::ofstream::out | std::ofstream::trunc);
+	if (ofs.is_open()) {
+		ofs << "desired_path = [";
+		for (double dist = 0.0; dist < m_pPath->getCircumference(); dist += 0.1) {
+			geometry_msgs::Pose * poseDesired = m_pPath->getPoseOnPath(dist);
+			ofs << poseDesired->position.x << ", " << poseDesired->position.y << ", " <<
+				asin(poseDesired->orientation.z) * 2 << "\n";
+		}
+		ofs << "];";
+		ofs.close();
+	}
 }
