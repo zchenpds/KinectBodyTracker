@@ -52,7 +52,7 @@ bool Config::assign(const std::string & strKey, std::string & strValue)
 		return false; // Failed to find the parameter.
 	else
 	{
-		if (strValue != m_mapParams[strKey])
+		if (strValue.compare(m_mapParams[strKey]) != 0)
 		{
 			m_countUpdates++;
 			strValue = m_mapParams[strKey];
