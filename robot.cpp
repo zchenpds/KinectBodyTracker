@@ -448,11 +448,12 @@ void Robot::setCalibRobotLogging(bool bCalib)
 	m_State.isCalibrating = bCalib;
 }
 
-void Robot::recordDesiredPath() const
+void Robot::recordDesiredPath()
 {
 	std::ofstream ofs;
-	s_strDataPath;
-	ofs.open(s_strDataPath + "desiredPath.m", std::ofstream::out | std::ofstream::trunc);
+	std::string fileName;
+	generateFileName(fileName, "desiredPath.m");
+	ofs.open(fileName, std::ofstream::out | std::ofstream::trunc);
 	if (ofs.is_open()) {
 		ofs << "desired_path = [";
 		for (double dist = 0.0; dist < m_pPath->getCircumference(); dist += 0.1) {
@@ -462,5 +463,8 @@ void Robot::recordDesiredPath() const
 		}
 		ofs << "];";
 		ofs.close();
+	}
+	else {
+		throw std::runtime_error("Robot::recordDesiredPath() failed to open\n\n" + fileName);
 	}
 }

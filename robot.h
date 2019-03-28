@@ -119,7 +119,7 @@ public:
 
 	void setCalibRobotLogging(bool bCalib);
 
-	void recordDesiredPath() const;
+	void recordDesiredPath();
 	
 };
 

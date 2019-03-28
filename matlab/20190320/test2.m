@@ -1,18 +1,24 @@
 %% Initialize variables.
 
-filename2 = uigetfile('data*Robot?.csv');
+[filename2, pathname2] = uigetfile('data*Robot?.csv');
 if isequal(filename2,0)
    disp('Cannot open data file. User selected Cancel');
    return
 end
-dataRobot = importRobotData(filename2);
+dataRobot = importRobotData([pathname2,filename2]);
+
+[filename3, pathname3] = uigetfile([pathname2,filename2(1:22),'*.m']);
+if isequal(filename3,0)
+   disp('Cannot open data file. User selected Cancel');
+   return
+end
+run([pathname3,filename3]);
 
 %%
 close all;
 figure;
 plot(dataRobot.xVm, dataRobot.yVm)
 hold on
-run('desiredPath.m')
 plot(desired_path(:,1), desired_path(:, 2), 'o');
 axis equal
 xlabel('x(m)')

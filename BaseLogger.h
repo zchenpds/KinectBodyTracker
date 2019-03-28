@@ -8,6 +8,7 @@ private:
 	std::ofstream m_DataFile;
 protected:
 	static std::string s_strDataPath;
+	static time_t m_rawtime; // the number of seconds elapsed since 1900 at 00:00 UTC
 public:
 	// Constructor of BaseLogger
 	// Argument "name" is suffixed to the file name.

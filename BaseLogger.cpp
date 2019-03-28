@@ -2,9 +2,12 @@
 #include "BaseLogger.h"
 
 std::string BaseLogger::s_strDataPath = "";
-
+time_t BaseLogger::m_rawtime = 0;
 BaseLogger::BaseLogger()
-{}
+{
+	if (m_rawtime == 0)
+		time(&m_rawtime); // obtain current time
+}
 
 
 BaseLogger::~BaseLogger()
@@ -19,11 +22,9 @@ void BaseLogger::openDataFile(const char * name)
 	// Open a csv file
 	std::string fileNameRobot;
 	generateFileName(fileNameRobot, name);
-	if (s_strDataPath.back() != '\\')
-		s_strDataPath += '\\';
-	m_DataFile.open(s_strDataPath + fileNameRobot, std::ofstream::out); // Open the csv file
+	m_DataFile.open(fileNameRobot, std::ofstream::out); // Open the csv file
 	if (m_DataFile.is_open() == false)
-		throw std::runtime_error("Cannot open directory\n" + s_strDataPath + 
+		throw std::runtime_error("Cannot open file\n" + fileNameRobot +
 			"\n\nBaseLogger::openDataFile(const char * name)");
 }
 
@@ -37,19 +38,21 @@ void BaseLogger::generateFileName(std::string & dest, const char * suffix)
 	else
 		MapCounter[strSuffix]++;
 
-	time_t rawtime; // the number of seconds elapsed since 1900 at 00:00 UTC
-	time(&rawtime); // obtain current time
-	struct tm *timeinfo = localtime(&rawtime); // represent current time using struct
+	struct tm *timeinfo = localtime(&m_rawtime); // represent current time using struct
 	std::stringstream ssFileName; // Construct the name of the csv file
-	ssFileName << "data-"
+	ssFileName << "data_"
 		<< timeinfo->tm_year + 1900 << std::setfill('0')
 		<< std::setw(2) << timeinfo->tm_mon + 1
-		<< std::setw(2) << timeinfo->tm_mday << "-"
-		<< std::setw(2) << timeinfo->tm_hour << "-"
-		<< std::setw(2) << timeinfo->tm_min << "-"
-		<< std::setw(2) << timeinfo->tm_sec << "-"
-		<< suffix << MapCounter[strSuffix] << ".csv";
-	dest = ssFileName.str();
+		<< std::setw(2) << timeinfo->tm_mday << "_"
+		<< std::setw(2) << timeinfo->tm_hour << "_"
+		<< std::setw(2) << timeinfo->tm_min << "_"
+		<< std::setw(2) << timeinfo->tm_sec << "_"
+		<< suffix;
+	if (strSuffix.find('.') == std::string::npos)
+		ssFileName << MapCounter[strSuffix] << ".csv";
+	if (s_strDataPath.back() != '\\')
+		s_strDataPath += '\\';
+	dest = s_strDataPath + ssFileName.str();
 }
 
 void BaseLogger::logEOL()
