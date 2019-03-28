@@ -1,5 +1,6 @@
 ros_master=192.168.1.15:11411
-dataPath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190320\
+# This path must end with a backslash '\'
+dataPath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190320\data\
 
 robotPort=COM3
 
@@ -17,7 +18,7 @@ kSatRho=0.5
 kRho=1.0
 desiredPathSpeed=0.3
 
-controlMode=2
+controlMode=1
 
 isArActionLimiterForwardsEnabled=false
 

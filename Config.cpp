@@ -34,6 +34,7 @@ void Config::load(const std::string & fileName)
 	std::string strLine;
 	while (std::getline(ifsConfig, strLine))
 	{
+		strLine = strLine.substr(0, strLine.find_first_of('#')); // Remove comments
 		std::string strKey, strValue;
 		std::stringstream ss(strLine);
 		if (std::getline(ss, strKey, '='))
