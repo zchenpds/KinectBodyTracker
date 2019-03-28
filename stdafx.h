@@ -33,6 +33,9 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <locale> 
+#include <codecvt>
+
 
 #pragma comment (lib, "d2d1.lib")
 

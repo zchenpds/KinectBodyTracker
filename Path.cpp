@@ -36,7 +36,7 @@ namespace BodyTracker {
 		if (circumference > 0)
 			return circumference;
 		else
-			throw "Path circurmference is unset.";
+			; throw std::runtime_error("BasePath::getCircumference()");
 	}
 
 	// *** PathEight implementation ***

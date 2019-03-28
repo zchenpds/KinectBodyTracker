@@ -64,10 +64,8 @@ void ErrorExit(LPTSTR lpszFunction)
 	ExitProcess(dw);
 }
 
-//void generateFileName(std::string & dest, const char * suffix = "");
 
-
-class CBodyBasics : BaseLogger
+class CBodyBasics : public BaseLogger
 {
     static const int        cDepthWidth  = 512;
     static const int        cDepthHeight = 424;
@@ -165,7 +163,7 @@ private:
 	CalibState				m_pCalibState;
 
 	void                    setParams();
-	void					log(bool bHeader = false) const override;
+	void					log(bool bHeader = false) override;
 	void					control();
 	void					calibrate();
 
@@ -242,5 +240,6 @@ private:
     /// <param name="joint0">one joint of the bone to draw</param>
     /// <param name="joint1">other joint of the bone to draw</param>
     void                    DrawBone(const Joint* pJoints, const D2D1_POINT_2F* pJointPoints, JointType joint0, JointType joint1);
+
 };
 

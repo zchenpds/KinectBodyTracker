@@ -45,11 +45,11 @@ int APIENTRY wWinMain(
 		CBodyBasics application;
 		application.Run(hInstance, nShowCmd);
 	}
-	catch (const char * pszMessage) {
-		std::cout << pszMessage;
-
+	catch (std::runtime_error & error) {
+		ErrorExit((LPTSTR)std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(error.what()).c_str());
 	}
-    
+	
+
 }
 
 /// <summary>
@@ -267,7 +267,7 @@ void CBodyBasics::setParams()
 	m_pRobot->setParams();
 }
 
-void CBodyBasics::log(bool bHeader) const
+void CBodyBasics::log(bool bHeader)
 {
 	conditionalLog("tO", m_pSyncSocket->m_tsOdroid, bHeader);
 	conditionalLog("tOW", m_pSyncSocket->m_tsWindows, bHeader);

@@ -192,8 +192,9 @@ void Robot::setParams()
 		if (pathType.compare("PathEight") == 0) {
 			m_pPath = new BodyTracker::PathEight();
 		}
-		else
-			throw "Unknown path specified.";
+		else {
+			throw std::runtime_error("Robot::setParams() failed with error: Unknown path specified.\n\n");
+		}
 	}
 
 	m_pPath->setParams();
@@ -204,7 +205,7 @@ int Robot::getControlMode()
 	return m_Params.controlMode;
 }
 
-void Robot::log(bool bHeader) const
+void Robot::log(bool bHeader)
 {
 	
 	conditionalLog("tR", m_State.tsRobot, bHeader);

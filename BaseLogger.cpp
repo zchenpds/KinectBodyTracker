@@ -3,14 +3,15 @@
 
 std::string BaseLogger::s_strDataPath = "";
 
-BaseLogger::BaseLogger(): m_pDataFile(NULL)
+BaseLogger::BaseLogger()
 {}
 
 
 BaseLogger::~BaseLogger()
 {
-	m_pDataFile->close();
-	delete m_pDataFile;
+	if (m_DataFile.is_open()) {
+		m_DataFile.close();
+	}
 }
 
 void BaseLogger::openDataFile(const char * name)
@@ -20,9 +21,10 @@ void BaseLogger::openDataFile(const char * name)
 	generateFileName(fileNameRobot, name);
 	if (s_strDataPath.back() != '\\')
 		s_strDataPath += '\\';
-	m_pDataFile = new std::ofstream(s_strDataPath + fileNameRobot, std::ofstream::out); // Open the csv file
-	if (m_pDataFile->is_open() == false)
-		throw "Cannot open data log file";
+	m_DataFile.open(s_strDataPath + fileNameRobot, std::ofstream::out); // Open the csv file
+	if (m_DataFile.is_open() == false)
+		throw std::runtime_error("Cannot open directory\n" + s_strDataPath + 
+			"\n\nBaseLogger::openDataFile(const char * name)");
 }
 
 void BaseLogger::generateFileName(std::string & dest, const char * suffix)
@@ -50,8 +52,8 @@ void BaseLogger::generateFileName(std::string & dest, const char * suffix)
 	dest = ssFileName.str();
 }
 
-void BaseLogger::logEOL() const
+void BaseLogger::logEOL()
 {
-	if (m_pDataFile == NULL || m_pDataFile->is_open() == false) return;
-	*m_pDataFile << '\n';
+	if (m_DataFile.is_open() == false) return;
+	m_DataFile << '\n';
 }

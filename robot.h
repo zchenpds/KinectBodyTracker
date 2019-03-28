@@ -95,7 +95,7 @@ public:
 	bool init(HWND hWnd);
 	void setParams();
 	int getControlMode();
-	void log(bool bHeader = false) const override;
+	void log(bool bHeader = false) override;
 	void updateState();
 	pcRobotState getState();
 	void setCmd(float v, float w);
