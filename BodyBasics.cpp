@@ -239,9 +239,6 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 			m_pSyncSocket->receive();
 
 		Update();
-#ifdef ROBOT_USE_MOTION_COMMAND_FUNCTIONS
-		control();
-#endif // ROBOT_USE_MOTION_COMMAND_ACTIONS
 
 		//calibrate();
 		Sleep(2);
@@ -281,26 +278,6 @@ void CBodyBasics::log(bool bHeader)
 		conditionalLog(m_JointData.names[i].c_str(), m_JointData.data[i], bHeader);
 	
 	logEOL();
-}
-
-void CBodyBasics::control()
-{
-	m_pRobot->updateState();
-	pcRobotState pcState = m_pRobot->getState();
-	INT64 tsWindows = GetTickCount64();
-
-	float v, w, th;
-	m_pRobot->calcControl(&v, &w, &th);
-
-	if (!pcState->isFollowing /* || // if following is disabled
-							  m_pRobot->isVisualCmdTooOld() */) // or if the visual command is not up-to-date
-	{
-		m_pRobot->setCmd(0.0, 0.0);
-	}
-	else
-	{
-		m_pRobot->setCmd(v, w);
-	}
 }
 
 void CBodyBasics::calibrate()
@@ -614,7 +591,10 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				onPressingButtonFollow();
 				break;
 			case 2:
-				onPressingButtonCalibrate();
+				if (m_pRobot && m_pRobot->getControlMode() == 3 && m_pRobot->getState()->isFollowing)
+					m_pRobot->setCmdV(0.8 * m_pRobot->getState()->v);
+				else
+					onPressingButtonCalibrate();
 				break;
 			}
 			break;
@@ -650,6 +630,24 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				}
 				break;
 			}
+			break;
+		case WM_MOUSEWHEEL:
+		{
+			float wheelSpeed = (int)(wParam) >> 16;
+			if (m_pRobot && m_pRobot->getControlMode() == 3) {
+				m_pRobot->increaseKappaBy(wheelSpeed / 2000);
+			}
+		}
+			break;
+		case WM_MOUSEHWHEEL:
+		{
+			float wheelSpeed = (int)(wParam) >> 16;
+			bool halt = wParam & MK_MBUTTON;
+			if (m_pRobot && m_pRobot->getState()->isFollowing && m_pRobot->getControlMode() == 3) {
+				if (halt) m_pRobot->setCmdV(0.0f);
+				else m_pRobot->accelerateVBy(wheelSpeed / 2000);
+			}
+		}
 			break;
 		default:
 			break;

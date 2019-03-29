@@ -27,6 +27,11 @@ Robot::Robot() :
 	m_Params.vScale = 1.2;
 	m_Params.wScale = 0.3;
 
+	m_Params.vMax = 0.8;
+	m_Params.wMax = 2.4;
+	m_Params.kappaMax = 10;
+	m_Params.aNormalMax = 1;
+
 	m_Params.kSatPath = 0.3;
 	m_Params.kPath = 1.0;
 
@@ -38,6 +43,7 @@ Robot::Robot() :
 
 	m_ControlCmd.v = 0.0;
 	m_ControlCmd.w = 0.0;
+	m_ControlCmd.kappa = 0.0;
 
 	// Initialize some global data
 	Aria::init();
@@ -136,10 +142,8 @@ bool Robot::init(HWND hWnd)
 	m_pArRobot->addRangeDevice(m_pSonar);
 
 
-#ifdef ROBOT_USE_ACTIONS
 	m_pArRobot->addAction(m_pActionFollow, 52);
 	m_pArRobot->addAction(m_pActionLimiterForwards, 40);
-#endif // ROBOT_USE_ACTIONS
 
 	// If the robot has an Analog Gyro, this object will activate it, and 
 	// if the robot does not automatically use the gyro to correct heading,
@@ -160,6 +164,10 @@ void Robot::setParams()
 	pConfig->assign("VmHeading", m_Params.VmHeading);
 	pConfig->assign("vScale", m_Params.vScale);
 	pConfig->assign("wScale", m_Params.wScale);
+	pConfig->assign("vMax", m_Params.vMax);
+	pConfig->assign("wMax", m_Params.wMax);
+	pConfig->assign("kappaMax", m_Params.kappaMax);
+	pConfig->assign("aNormalMax", m_Params.aNormalMax);
 	pConfig->assign("controlMode", m_Params.controlMode);
 	pConfig->assign("desiredDistance", m_Params.desiredDistance);
 	pConfig->assign("kSatPath", m_Params.kSatPath);
@@ -224,6 +232,7 @@ void Robot::log(bool bHeader)
 	conditionalLog("yVmG", m_VisualCmd.yVmGoal, bHeader);
 	conditionalLog("vD", m_ControlCmd.v, bHeader);
 	conditionalLog("wD", m_ControlCmd.w, bHeader);
+	conditionalLog("kappaD", m_ControlCmd.kappa, bHeader);
 	conditionalLog("distVm", m_Params.VmDistance, bHeader);
 	conditionalLog("headVm", m_Params.VmHeading, bHeader);
 	conditionalLog("vScale", m_Params.vScale, bHeader);
@@ -279,16 +288,36 @@ pcRobotState Robot::getState()
 	return &m_State;
 }
 
-void Robot::setCmd(float v, float w)
+void Robot::setCmdV(float v, float maxV)
 {
-	if (!m_pArRobot->isConnected())
-		return;
-	m_pArRobot->lock();
+	maxV = min(maxV, m_Params.vMax);
+	m_ControlCmd.v = saturate(v, -maxV, maxV);
+}
 
-	m_pArRobot->setVel(v * 1e3);
-	m_pArRobot->setRotVel(w * 180 / M_PI);
+void Robot::setCmdW(float w, float maxW)
+{
+	maxW = min(maxW, m_Params.wMax);
+	m_ControlCmd.w = saturate(w, -maxW, maxW);
+}
 
-	m_pArRobot->unlock();
+void Robot::setCmdKappa(float kappa, float maxKappa)
+{
+	maxKappa = min(maxKappa, m_Params.kappaMax);
+	m_ControlCmd.kappa = saturate(kappa, -maxKappa, maxKappa);
+}
+
+void Robot::accelerateVBy(float deltaV)
+{
+	// Assume we are in controlMode 3
+	float maxV = sqrt(m_Params.aNormalMax / fabs(m_ControlCmd.kappa));
+	setCmdV(m_ControlCmd.v + deltaV, maxV);
+}
+
+void Robot::increaseKappaBy(float deltaKappa)
+{
+	// Assume we are in controlMode 3
+	float maxKappa = m_Params.aNormalMax / pow(m_ControlCmd.v, 2);
+	setCmdKappa(m_ControlCmd.kappa + deltaKappa, maxKappa);
 }
 
 bool Robot::toggleFollowing()
@@ -297,8 +326,12 @@ bool Robot::toggleFollowing()
 	{
 		if (!m_State.isFollowing)
 			m_State.isFollowing = true;
-		else
+		else {
 			m_State.isFollowing = false;
+			m_ControlCmd.v = 0;
+			m_ControlCmd.w = 0;
+		}
+			
 		return true; // succeeded
 	}
 	else
@@ -429,6 +462,10 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 		m_ControlCmd.w = -vx * sin(m_State.th) / m_Params.VmDistance + vy * cos(m_State.th) / m_Params.VmDistance;
 		if (pV != NULL) *pV = m_ControlCmd.v;
 		if (pW != NULL) *pW = m_ControlCmd.w;
+	}
+	else if (m_Params.controlMode == 3) {
+		if (pV != NULL) *pV = m_ControlCmd.v;
+		if (pW != NULL) *pW = m_ControlCmd.v * m_ControlCmd.kappa;
 	}
 }
 

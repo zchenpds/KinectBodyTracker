@@ -7,9 +7,6 @@
 #include "BaseLogger.h"
 #include "Path.h"
 
-#define ROBOT_USE_ACTIONS
-//#define ROBOT_USE_MOTION_COMMAND_FUNCTIONS
-
 class ActionFollow;
 
 typedef struct RobotState_ {
@@ -51,6 +48,11 @@ typedef struct ControlParams_ {
 	float			vScale;
 	float			wScale;
 
+	float			vMax;
+	float			wMax;
+	float			kappaMax;
+	float			aNormalMax;
+
 	float			desiredDistance;
 	int				controlMode; //
 
@@ -67,6 +69,7 @@ typedef struct ControlParams_ {
 typedef struct ControlCmd_ {
 	float			v;
 	float			w;
+	float			kappa; // Turning curvature
 } ControlCmd;
 
 class Robot : BaseLogger
@@ -98,7 +101,14 @@ public:
 	void log(bool bHeader = false) override;
 	void updateState();
 	pcRobotState getState();
-	void setCmd(float v, float w);
+
+	void setCmdV(float v, float maxV = 1.6);
+	void setCmdW(float w, float maxW = 4.8);
+	void setCmdKappa(float kappa, float maxKappa = 20);
+
+	void accelerateVBy(float deltaV);
+	//void accelerateWBy(float deltaW);
+	void increaseKappaBy(float deltaKappa);
 
 	bool toggleFollowing();
 	bool toggleCalibration();

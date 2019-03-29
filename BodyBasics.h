@@ -164,7 +164,6 @@ private:
 
 	void                    setParams();
 	void					log(bool bHeader = false) override;
-	void					control();
 	void					calibrate();
 
 	inline void				onPressingButtonFollow();
