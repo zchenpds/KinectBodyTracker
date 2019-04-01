@@ -30,9 +30,7 @@ desiredPathSpeed=0.3
 # 1: Fixed speed path following control
 # 2: Path following control with speed adjusted by the follower distance
 # 3: Mouse operated acceleration and steering.
-controlMode=3
-
-isArActionLimiterForwardsEnabled=false
+controlMode=1
 
 pathType=PathEight
 PathEight/half_dist_circle=1.3

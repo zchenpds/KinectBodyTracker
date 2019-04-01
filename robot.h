@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "BaseLogger.h"
 #include "Path.h"
+#include <vector>
 
 class ActionFollow;
 
@@ -56,8 +57,6 @@ typedef struct ControlParams_ {
 	float			desiredDistance;
 	int				controlMode; //
 
-	bool			isArActionLimiterForwardsEnabled;
-
 	float			kSatPath; // for path following control
 	float			kPath;
 
@@ -88,7 +87,7 @@ protected:
 	ControlParams				m_Params; // not initialized
 	ControlCmd					m_ControlCmd;
 	ActionFollow*				m_pActionFollow;
-	ArActionLimiterForwards*    m_pActionLimiterForwards;
+	std::vector<ArAction*>		m_vecpArActionLimiters;
 	HWND						m_hWnd;
 	BodyTracker::BasePath*		m_pPath;
 public:

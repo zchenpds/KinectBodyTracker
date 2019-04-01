@@ -10,7 +10,6 @@ Robot::Robot() :
 	m_pGyro(NULL),
 	m_pParser(NULL),
 	m_pActionFollow(NULL),
-	m_pActionLimiterForwards(NULL),
 	m_hWnd(NULL),
 	m_pPath(NULL) // will not be instantiated until the first time setParams() is invoked
 {
@@ -18,7 +17,6 @@ Robot::Robot() :
 	m_State.isFollowing = false;
 	m_State.isCalibrating = false;
 	m_State.tsWindows = -1;
-	m_Params.isArActionLimiterForwardsEnabled = true;
 	m_Params.controlMode = 0;
 
 	m_Params.desiredDistance = 1.5;
@@ -69,7 +67,9 @@ Robot::Robot() :
 
 
 	m_pActionFollow = new ActionFollow(this);
-	m_pActionLimiterForwards = new ArActionLimiterForwards();
+	m_vecpArActionLimiters.push_back(new ArActionLimiterForwards());
+	m_vecpArActionLimiters.push_back(new ArActionLimiterRot());
+	m_vecpArActionLimiters.push_back(new ArActionLimiterBackwards());
 
 	// log heading of the csv file
 	openDataFile("Robot");
@@ -88,7 +88,10 @@ Robot::~Robot()
 	delete m_pArgs;
 	delete m_pParser;
 	delete m_pActionFollow;
-	delete m_pActionLimiterForwards;
+	while (!m_vecpArActionLimiters.empty()) {
+		delete m_vecpArActionLimiters.back();
+		m_vecpArActionLimiters.pop_back();
+	}
 	delete m_pPath;
 }
 
@@ -143,7 +146,10 @@ bool Robot::init(HWND hWnd)
 
 
 	m_pArRobot->addAction(m_pActionFollow, 52);
-	m_pArRobot->addAction(m_pActionLimiterForwards, 40);
+	for (auto&& it : m_vecpArActionLimiters) {
+		m_pArRobot->addAction(it, 60);
+	}
+	
 
 	// If the robot has an Analog Gyro, this object will activate it, and 
 	// if the robot does not automatically use the gyro to correct heading,
@@ -180,10 +186,6 @@ void Robot::setParams()
 	pConfig->assign("robotPort", StrRobotPort);
 	m_pArgs->add("-robotPort %s", StrRobotPort.c_str());
 
-	pConfig->assign("isArActionLimiterForwardsEnabled", m_Params.isArActionLimiterForwardsEnabled);
-	if (m_Params.isArActionLimiterForwardsEnabled) m_pActionLimiterForwards->setParameters();
-	else m_pActionLimiterForwards->setParameters(1.0, 1.0, 2000.0, 0.1);
-	
 	resetVisualCmd();
 
 	m_pActionFollow->setParams();
@@ -529,6 +531,13 @@ bool Robot::predictState(RobotState * prs, float tSec)
 		th = prs->th;
 		v = m_ControlCmd.v;
 		w = m_ControlCmd.v * m_ControlCmd.kappa;
+	}
+	else if (getControlMode() == 1) {
+		x = prs->x;
+		y = prs->y;
+		th = prs->th;
+		v = m_State.v;
+		w = m_State.w;
 	}
 	else {
 		return false;
