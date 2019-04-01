@@ -11,6 +11,8 @@ Release/*
 docs/*
 *.user
 data/
+data_*
+desiredPath*
 
 BodyTracker-Debug.sln
 test

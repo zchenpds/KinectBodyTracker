@@ -136,6 +136,14 @@ private:
     ID2D1SolidColorBrush*   m_pBrushHandOpen;
     ID2D1SolidColorBrush*   m_pBrushHandLasso;
 
+	// Robot drawing
+	ID2D1HwndRenderTarget*  m_pRenderTarget2;
+	ID2D1SolidColorBrush*   m_pBrushRobotBody;
+	ID2D1SolidColorBrush*   m_pBrushRobotWheel;
+	ID2D1SolidColorBrush*   m_pBrushRobotBodyPred;
+	ID2D1SolidColorBrush*   m_pBrushRobotWheelPred;
+	ID2D1SolidColorBrush*   m_pBrushRobotObstacle;
+
 	//
 	SyncSocket*				m_pSyncSocket;
 	Robot*					m_pRobot;
@@ -146,6 +154,7 @@ private:
 	HWND					m_hWndButtonCalibrate;
 	HWND					m_hWndButtonOpenConfig;
 	HWND					m_hWndButtonLoad;
+	HWND					m_hWndButtonExit;
 	HWND                    m_hWndStatic;
 
 	// ROS Publisher
@@ -201,11 +210,13 @@ private:
     /// </summary>
     /// <returns>S_OK if successful, otherwise an error code</returns>
     HRESULT EnsureDirect2DResources();
+	HRESULT EnsureDirect2DResources2();
 
     /// <summary>
     /// Dispose Direct2d resources 
     /// </summary>
     void DiscardDirect2DResources();
+	void DiscardDirect2DResources2();
 
     /// <summary>
     /// Converts a body point to screen space
@@ -239,6 +250,10 @@ private:
     /// <param name="joint0">one joint of the bone to draw</param>
     /// <param name="joint1">other joint of the bone to draw</param>
     void                    DrawBone(const Joint* pJoints, const D2D1_POINT_2F* pJointPoints, JointType joint0, JointType joint1);
+
+	// Draws a robot
+	void RenderRobotSurroundings();
+	void DrawRobot(int drawType, float opacity = 1.0);
 
 };
 

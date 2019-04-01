@@ -76,6 +76,12 @@ CBodyBasics::CBodyBasics() :
     m_pBrushHandClosed(NULL),
     m_pBrushHandOpen(NULL),
     m_pBrushHandLasso(NULL),
+	m_pRenderTarget2(NULL),
+	m_pBrushRobotBody(NULL),
+	m_pBrushRobotWheel(NULL),
+	m_pBrushRobotBodyPred(NULL),
+	m_pBrushRobotWheelPred(NULL),
+	m_pBrushRobotObstacle(NULL),
 	m_pRosPublisher(NULL),
 	m_pRobot(NULL),
 	m_pSyncSocket(NULL)
@@ -93,6 +99,7 @@ CBodyBasics::CBodyBasics() :
 
 	m_pSyncSocket = new SyncSocket();
 	m_pRobot = new Robot();
+	m_pRobot->SIPcbFun = std::bind(&CBodyBasics::RenderRobotSurroundings, this);
 
 	setParams();
 
@@ -123,6 +130,7 @@ CBodyBasics::~CBodyBasics()
 		
 
     DiscardDirect2DResources();
+	DiscardDirect2DResources2();
 
     // clean up Direct2D
     SafeRelease(m_pD2DFactory);
@@ -176,9 +184,11 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
 	RECT rc;
 	GetWindowRect(GetDlgItem(m_hWnd, IDC_VIDEOVIEW), &rc);
-	int heightButton = 60, widthButton = 330, 
-		xButton = rc.right + 20, yButton = 20;
-	int ySep = 20;
+	int heightButton = 40, widthButton = 180;
+	const int xButtonLeft = rc.left + 20;
+	const int yButtonTop = rc.bottom + 100;
+	const int yButtonSep = 20, xButtonSep = 30;
+	const int yButtonBottom = yButtonTop + (heightButton + yButtonSep) * 1.5;
 
 	struct ControlProperty {
 		HWND * phWnd;
@@ -191,7 +201,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 	
 	ControlProperty CPs[] = { 
 		{ &m_hWndButtonFollow, L"BUTTON", L"Start following",
-		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton * 5 },
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
 
 		{ &m_hWndButtonCalibrate, L"BUTTON", L"Start Calibration",
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
@@ -202,14 +212,21 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		{ &m_hWndButtonLoad, L"BUTTON", L"Load Config", 
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
 
+		{ &m_hWndButtonExit, L"BUTTON", L"Exit",
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
+
 		{ &m_hWndStatic, L"STATIC", L"", 
 		WS_VISIBLE | WS_CHILD, widthButton, heightButton*2 }
 	};
 
-	for (int i = 0, x = xButton, y = yButton;
+	for (int i = 0, x = xButtonLeft, y = yButtonTop;
 		i < sizeof(CPs) / sizeof(CPs[0]); 
-		y += CPs[i].h + ySep, i++)
+		y += CPs[i].h + yButtonSep, i++)
 	{
+		if (y > yButtonBottom) {
+			y = yButtonTop;
+			x += CPs[i].w + xButtonSep;
+		}
 		*(CPs[i].phWnd) = CreateWindow(
 			CPs[i].className,  // Predefined class; Unicode assumed 
 			CPs[i].text,      // Button text 
@@ -229,7 +246,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 	RegisterHotKey(hWndApp, 2, MOD_CONTROL | MOD_NOREPEAT, 'C');
 
     // Show window
-    ShowWindow(hWndApp, nCmdShow);
+    ShowWindow(hWndApp, SW_MAXIMIZE);//nCmdShow
 	
     // Main message loop
     while (WM_QUIT != msg.message)
@@ -628,6 +645,11 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 					StringCchPrintf(pszText, 32, L"%d parameter%s updated.", cnt, cnt > 1 ? L"s" : L"");
 					SetWindowText(m_hWndStatic, pszText);
 				}
+				else if (m_hWndButtonExit == hButton)
+				{
+					// Exit button
+					DestroyWindow(hWnd);
+				}
 				break;
 			}
 			break;
@@ -645,7 +667,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			bool halt = wParam & MK_MBUTTON;
 			if (m_pRobot && m_pRobot->getState()->isFollowing && m_pRobot->getControlMode() == 3) {
 				if (halt) m_pRobot->setCmdV(0.0f);
-				else m_pRobot->accelerateVBy(wheelSpeed / 2000);
+				else m_pRobot->accelerateVBy(wheelSpeed / 6000);
 			}
 		}
 			break;
@@ -978,6 +1000,48 @@ HRESULT CBodyBasics::EnsureDirect2DResources()
     return hr;
 }
 
+HRESULT CBodyBasics::EnsureDirect2DResources2()
+{
+	HRESULT hr = S_OK;
+
+	if (m_pD2DFactory && !m_pRenderTarget2)
+	{
+		RECT rc;
+		GetWindowRect(GetDlgItem(m_hWnd, IDC_VIDEOVIEW2), &rc);
+
+		int width = rc.right - rc.left;
+		int height = rc.bottom - rc.top;
+		D2D1_SIZE_U size = D2D1::SizeU(width, height);
+		D2D1_RENDER_TARGET_PROPERTIES rtProps = D2D1::RenderTargetProperties();
+		rtProps.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+		rtProps.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
+
+		// Create a Hwnd render target, in order to render to the window set in initialize
+		hr = m_pD2DFactory->CreateHwndRenderTarget(
+			rtProps,
+			D2D1::HwndRenderTargetProperties(GetDlgItem(m_hWnd, IDC_VIDEOVIEW2), size),
+			&m_pRenderTarget2
+		);
+
+		if (FAILED(hr))
+		{
+			SetStatusMessage(L"Couldn't create Direct2D render target!", 10000, true);
+			return hr;
+		}
+
+		
+
+		// Brushes
+		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Red, 1.0f), &m_pBrushRobotBody);
+		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Gray, 1.0f), &m_pBrushRobotWheel);
+		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LightPink, 1.0f), &m_pBrushRobotBodyPred);
+		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LightGray, 1.0f), &m_pBrushRobotWheelPred);
+		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LightGoldenrodYellow, 1.0f), &m_pBrushRobotObstacle);
+	}
+
+	return hr;
+}
+
 /// <summary>
 /// Dispose Direct2d resources 
 /// </summary>
@@ -993,6 +1057,13 @@ void CBodyBasics::DiscardDirect2DResources()
     SafeRelease(m_pBrushHandClosed);
     SafeRelease(m_pBrushHandOpen);
     SafeRelease(m_pBrushHandLasso);
+}
+
+void CBodyBasics::DiscardDirect2DResources2()
+{
+	SafeRelease(m_pRenderTarget2);
+
+	SafeRelease(m_pBrushRobotBody);
 }
 
 /// <summary>
@@ -1132,4 +1203,95 @@ void CBodyBasics::DrawHand(HandState handState, const D2D1_POINT_2F& handPositio
             m_pRenderTarget->FillEllipse(ellipse, m_pBrushHandLasso);
             break;
     }
+}
+
+
+void CBodyBasics::RenderRobotSurroundings()
+{
+	if (m_hWnd)
+	{
+		HRESULT hr = EnsureDirect2DResources2();
+
+		if (SUCCEEDED(hr) && m_pRenderTarget2)
+		{
+			m_pRenderTarget2->BeginDraw();
+			m_pRenderTarget2->Clear();
+
+			D2D1_SIZE_F rtSize = m_pRenderTarget2->GetSize();
+			int width = rtSize.width;
+			int height = rtSize.height;
+
+			// Map from robot frame coordinates to screen coordinates
+			D2D1::Matrix3x2F matScreen = D2D1::Matrix3x2F::Scale(150.0f, 150.0f) *
+				D2D1::Matrix3x2F::Translation(width / 2, height / 2);
+
+			// Draw the robot at the origin
+			m_pRenderTarget2->SetTransform(matScreen);
+			DrawRobot(0);
+
+			// Draw predicted state of the robot
+			RobotState rState;
+			ZeroMemory(&rState, sizeof(rState));
+			float t = 0;
+			for (float dt : { 0.5f, 0.5f, 0.5f}) {
+				t += dt;
+				if (m_pRobot->predictState(&rState, dt)) {
+					D2D1::Matrix3x2F matPred = D2D1::Matrix3x2F::Rotation(-rState.th * 180.0 / M_PI) *
+						D2D1::Matrix3x2F::Translation(-rState.y, -rState.x);
+					m_pRenderTarget2->SetTransform(matPred * matScreen);
+					DrawRobot(1, 1/(t+1));
+				}
+				else {
+					break;
+				}
+			}
+
+			// Finish drawing
+			hr = m_pRenderTarget2->EndDraw();
+
+			// Device lost, need to recreate the render target
+			// We'll dispose it now and retry drawing
+			if (D2DERR_RECREATE_TARGET == hr)
+			{
+				hr = S_OK;
+				DiscardDirect2DResources2();
+			}
+		}
+	}
+}
+
+void CBodyBasics::DrawRobot(int drawType, float opacity)
+{
+	ID2D1SolidColorBrush * pBrushWheel, *pBrushBody;
+	switch (drawType) {
+	case 0:
+		pBrushWheel = m_pBrushRobotWheel;
+		pBrushBody = m_pBrushRobotBody;
+		break;
+	case 1:
+		pBrushWheel = m_pBrushRobotWheelPred;
+		pBrushBody = m_pBrushRobotBodyPred;
+		break;
+	default:
+		throw std::runtime_error("Unknown draw type.");
+	}
+	pBrushWheel->SetOpacity(opacity);
+	pBrushBody->SetOpacity(opacity);
+
+	// Draw robot wheels
+	const float xWheel = 0.38 / 2, yWheel = 0.26 / 2; // wheel shift in x and y
+	const float hwWheel = 0.05, rWheel = 0.11; // half width and radius of the wheels
+	for (float x : { -xWheel, xWheel }) {
+		for (float y : { -yWheel, yWheel }) {
+			D2D1_RECT_F rectWheel = D2D1::Rect(x - hwWheel, y + rWheel, x + hwWheel, y - rWheel);
+			D2D1_ROUNDED_RECT rrectWheel = D2D1::RoundedRect(rectWheel, 0.02, 0.02);
+			m_pRenderTarget2->FillRoundedRectangle(rrectWheel, pBrushWheel);
+		}
+	}
+
+	// Draw robot body
+	const float wBody = 0.38, lBody = 0.5;
+	D2D1_RECT_F rectBody = D2D1::Rect(-wBody / 2, lBody / 2, wBody / 2, -lBody / 2);
+	D2D1_ROUNDED_RECT rrectBody = D2D1::RoundedRect(rectBody, 0.1, 0.1);
+	m_pRenderTarget2->FillRoundedRectangle(rrectBody, pBrushBody);
 }

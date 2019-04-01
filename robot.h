@@ -101,6 +101,7 @@ public:
 	void log(bool bHeader = false) override;
 	void updateState();
 	pcRobotState getState();
+	bool isConnected();
 
 	void setCmdV(float v, float maxV = 1.6);
 	void setCmdW(float w, float maxW = 4.8);
@@ -130,6 +131,9 @@ public:
 	void setCalibRobotLogging(bool bCalib);
 
 	void recordDesiredPath();
+
+	std::function<void()> SIPcbFun;
+	bool predictState(RobotState * prs, float tSec);
 	
 };
 

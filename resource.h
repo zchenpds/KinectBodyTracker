@@ -6,7 +6,7 @@
 #define IDD_APP                         100
 #define IDC_VIDEOVIEW                   1000
 #define IDC_STATUS                      1001
-#define IDC_BUTTON1                     1002
+#define IDC_VIDEOVIEW2                  1005
 
 // Next default values for new objects
 // 

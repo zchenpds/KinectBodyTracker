@@ -288,6 +288,11 @@ pcRobotState Robot::getState()
 	return &m_State;
 }
 
+bool Robot::isConnected()
+{
+	return m_pArRobot->isConnected();
+}
+
 void Robot::setCmdV(float v, float maxV)
 {
 	maxV = min(maxV, m_Params.vMax);
@@ -311,6 +316,8 @@ void Robot::accelerateVBy(float deltaV)
 	// Assume we are in controlMode 3
 	float maxV = sqrt(m_Params.aNormalMax / fabs(m_ControlCmd.kappa));
 	setCmdV(m_ControlCmd.v + deltaV, maxV);
+	if (!isConnected() && SIPcbFun)
+		SIPcbFun();
 }
 
 void Robot::increaseKappaBy(float deltaKappa)
@@ -318,6 +325,8 @@ void Robot::increaseKappaBy(float deltaKappa)
 	// Assume we are in controlMode 3
 	float maxKappa = m_Params.aNormalMax / pow(m_ControlCmd.v, 2);
 	setCmdKappa(m_ControlCmd.kappa + deltaKappa, maxKappa);
+	if (!isConnected() && SIPcbFun)
+		SIPcbFun();
 }
 
 bool Robot::toggleFollowing()
@@ -465,7 +474,12 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 	}
 	else if (m_Params.controlMode == 3) {
 		if (pV != NULL) *pV = m_ControlCmd.v;
-		if (pW != NULL) *pW = m_ControlCmd.v * m_ControlCmd.kappa;
+		m_ControlCmd.w = m_ControlCmd.v * m_ControlCmd.kappa;
+		if (pW != NULL) *pW = m_ControlCmd.w;
+	}
+
+	if (SIPcbFun) {
+		SIPcbFun();
 	}
 }
 
@@ -504,4 +518,30 @@ void Robot::recordDesiredPath()
 	else {
 		throw std::runtime_error("Robot::recordDesiredPath() failed to open\n\n" + fileName);
 	}
+}
+
+bool Robot::predictState(RobotState * prs, float tSec)
+{
+	float x, y, th, v, w;
+	if (getControlMode() == 3) {
+		x = prs->x;
+		y = prs->y;
+		th = prs->th;
+		v = m_ControlCmd.v;
+		w = m_ControlCmd.v * m_ControlCmd.kappa;
+	}
+	else {
+		return false;
+	}
+
+	float dt = 0.1;
+	for (float t = 0; t < tSec; t+= dt) {
+		x += v * cos(th) * dt;
+		y += v * sin(th) * dt;
+		th += w * dt;
+	}
+	prs->x = x;
+	prs->y = y;
+	prs->th = th;
+	return true;
 }
