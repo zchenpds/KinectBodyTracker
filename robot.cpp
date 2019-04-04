@@ -154,7 +154,7 @@ bool Robot::init(HWND hWnd)
 	// If the robot has an Analog Gyro, this object will activate it, and 
 	// if the robot does not automatically use the gyro to correct heading,
 	// this object reads data from it and corrects the pose in ArRobot
-	//m_pGyro = new ArAnalogGyro(m_pArRobot); // to-do: add a gyro switch in config
+	m_pGyro = new ArAnalogGyro(m_pArRobot); // to-do: add a gyro switch in config
 
 	m_pArRobot->enableMotors();
 
