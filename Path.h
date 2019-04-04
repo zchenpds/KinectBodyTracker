@@ -18,7 +18,7 @@ namespace BodyTracker {
 		BasePath();
 		void setPathPose(double x, double y, double th);
 		void setPathPose(geometry_msgs::Pose* pPathPose);
-		virtual geometry_msgs::Pose *getPoseOnPath(double dist) = 0;
+		virtual geometry_msgs::Pose *getPoseOnPath(double dist, float * pMaxV = NULL) = 0;
 		double getCircumference() const;
 		virtual void setParams() = 0;
 		virtual std::string getType() const = 0;
@@ -35,10 +35,13 @@ namespace BodyTracker {
 		double turn_angle;
 		double curved_part_len;
 
+		float aLateralMax; // Maximum lateral acceleration
+		float aLongitudinalMax; // Maximum longitudinal acceleration
+
 	public:
 		PathEight();
 		~PathEight();
-		geometry_msgs::Pose *getPoseOnPath(double dist) override;
+		geometry_msgs::Pose *getPoseOnPath(double dist, float * pMaxV = NULL) override;
 		void setParams() override;
 		std::string getType() const override;
 	};

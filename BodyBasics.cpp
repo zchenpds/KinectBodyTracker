@@ -100,8 +100,10 @@ CBodyBasics::CBodyBasics() :
 	m_pSyncSocket = new SyncSocket();
 	m_pRobot = new Robot();
 	m_pRobot->SIPcbFun = std::bind(&CBodyBasics::RenderRobotSurroundings, this);
-
+	
 	setParams();
+	
+	m_pRobot->recordDesiredPath();
 
 	ZeroMemory(&m_JointData, sizeof(m_JointData));
 	m_JointData.tsWindowsBase = GetTickCount64();

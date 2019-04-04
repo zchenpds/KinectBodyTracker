@@ -450,7 +450,7 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 	}
 	else if (m_Params.controlMode == 1 || m_Params.controlMode == 2){
 		// Follows a path
-		static double vd = 0.15;
+		float vd, vMaxPath;
 		if (m_Params.controlMode == 1) {
 			// Constant vd
 			vd = m_Params.desiredPathSpeed;
@@ -459,14 +459,14 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 			// vd is determined by the state of the human follower
 			vd += ( m_VisualCmd.rhoDot + m_Params.kSatRho * tanh(m_Params.kRho * m_VisualCmd.rhoTilde / m_Params.kSatRho) )
 				/ cos(m_VisualCmd.psiR);
-			if (vd > 0.7) vd = 0.7;
-			if (vd < 0.0) vd = 0.0;
+			vd = saturate(vd, 0.0f, 0.7f);
 		}
 
 		if (!m_pPath)
 			throw std::runtime_error("Path is not yet instantiated.\n\n");
 		
-		geometry_msgs::Pose *pPoseDesired = m_pPath->getPoseOnPath(m_State.dist);
+		geometry_msgs::Pose *pPoseDesired = m_pPath->getPoseOnPath(m_State.dist, &vMaxPath);
+		vd = saturate(vd, 0.0f, vMaxPath);
 		double thDesired = asin(pPoseDesired->orientation.z) * 2;
 		double xError = pPoseDesired->position.x - m_State.xVm;
 		double yError = pPoseDesired->position.y - m_State.yVm;
@@ -506,6 +506,7 @@ void Robot::setCalibRobotLogging(bool bCalib)
 
 void Robot::recordDesiredPath()
 {
+	if (!m_pPath) throw std::runtime_error("Path not planned. Cannot record desired path.\n\n");
 	std::ofstream ofs;
 	std::string fileName;
 	generateFileName(fileName, "desiredPath.m");
@@ -513,9 +514,10 @@ void Robot::recordDesiredPath()
 	if (ofs.is_open()) {
 		ofs << "desired_path = [";
 		for (double dist = 0.0; dist < m_pPath->getCircumference(); dist += 0.1) {
-			geometry_msgs::Pose * poseDesired = m_pPath->getPoseOnPath(dist);
+			float vMaxPath;
+			geometry_msgs::Pose * poseDesired = m_pPath->getPoseOnPath(dist, &vMaxPath);
 			ofs << poseDesired->position.x << ", " << poseDesired->position.y << ", " <<
-				asin(poseDesired->orientation.z) * 2 << "\n";
+				asin(poseDesired->orientation.z) * 2 << ", " << vMaxPath << "\n";
 		}
 		ofs << "];";
 		ofs.close();
