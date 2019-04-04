@@ -52,7 +52,7 @@ typedef struct ControlParams_ {
 	float			vMax;
 	float			wMax;
 	float			kappaMax;
-	float			aNormalMax;
+	float			aLateralMax;
 
 	float			desiredDistance;
 	int				controlMode; //
@@ -122,6 +122,8 @@ public:
 	void updateControlParams(const float * params);
 
 	bool isVisualCmdTooOld();
+
+	// This function is invoked by the fire function of ActionFollow in sychronization with the SIP loop.
 	void calcControl(float * pV = NULL, float * pW = NULL, float * pTh = NULL);
 
 	// Initialize the virtual marker to where it would generate zero robot action/movement
@@ -133,6 +135,9 @@ public:
 
 	std::function<void()> SIPcbFun;
 	bool predictState(RobotState * prs, float tSec);
+
+	// Get SONAR pointer
+	ArSonarDevice * getSonar();
 	
 };
 

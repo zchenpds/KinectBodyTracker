@@ -28,7 +28,7 @@ Robot::Robot() :
 	m_Params.vMax = 0.8;
 	m_Params.wMax = 2.4;
 	m_Params.kappaMax = 10;
-	m_Params.aNormalMax = 1;
+	m_Params.aLateralMax = 0.3;
 
 	m_Params.kSatPath = 0.3;
 	m_Params.kPath = 1.0;
@@ -173,7 +173,7 @@ void Robot::setParams()
 	pConfig->assign("vMax", m_Params.vMax);
 	pConfig->assign("wMax", m_Params.wMax);
 	pConfig->assign("kappaMax", m_Params.kappaMax);
-	pConfig->assign("aNormalMax", m_Params.aNormalMax);
+	pConfig->assign("aLateralMax", m_Params.aLateralMax);
 	pConfig->assign("controlMode", m_Params.controlMode);
 	pConfig->assign("desiredDistance", m_Params.desiredDistance);
 	pConfig->assign("kSatPath", m_Params.kSatPath);
@@ -316,7 +316,7 @@ void Robot::setCmdKappa(float kappa, float maxKappa)
 void Robot::accelerateVBy(float deltaV)
 {
 	// Assume we are in controlMode 3
-	float maxV = sqrt(m_Params.aNormalMax / fabs(m_ControlCmd.kappa));
+	float maxV = sqrt(m_Params.aLateralMax / fabs(m_ControlCmd.kappa));
 	setCmdV(m_ControlCmd.v + deltaV, maxV);
 	if (!isConnected() && SIPcbFun)
 		SIPcbFun();
@@ -325,7 +325,7 @@ void Robot::accelerateVBy(float deltaV)
 void Robot::increaseKappaBy(float deltaKappa)
 {
 	// Assume we are in controlMode 3
-	float maxKappa = m_Params.aNormalMax / pow(m_ControlCmd.v, 2);
+	float maxKappa = m_Params.aLateralMax / pow(m_ControlCmd.v, 2);
 	setCmdKappa(m_ControlCmd.kappa + deltaKappa, maxKappa);
 	if (!isConnected() && SIPcbFun)
 		SIPcbFun();
@@ -462,6 +462,9 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 			if (vd > 0.7) vd = 0.7;
 			if (vd < 0.0) vd = 0.0;
 		}
+
+		if (!m_pPath)
+			throw std::runtime_error("Path is not yet instantiated.\n\n");
 		
 		geometry_msgs::Pose *pPoseDesired = m_pPath->getPoseOnPath(m_State.dist);
 		double thDesired = asin(pPoseDesired->orientation.z) * 2;
@@ -553,4 +556,9 @@ bool Robot::predictState(RobotState * prs, float tSec)
 	prs->y = y;
 	prs->th = th;
 	return true;
+}
+
+ArSonarDevice * Robot::getSonar()
+{
+	return m_pSonar;
 }

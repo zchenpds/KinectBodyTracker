@@ -31,8 +31,7 @@ protected:
 
 	// Log one item of information.
 	// If "bHeader" is true, then log "name"; Otherwise, log "value".
-	//template<class T>
-	//inline void conditionalLog(char const * name, const T & value, bool bHeader) const;
+	// TO-DO: Make bHeader a private member variable that can be set by a member function void setHeader(bool)
 	template<class T>
 	void conditionalLog(char const * name, const T & value, bool bHeader)
 	{

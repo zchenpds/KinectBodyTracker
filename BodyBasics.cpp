@@ -1246,6 +1246,19 @@ void CBodyBasics::RenderRobotSurroundings()
 				}
 			}
 
+			// Draw obstacles detected by SONAR
+			std::vector<ArPoseWithTime> * pVecPoseOfObstacles = m_pRobot->getSonar()->getCurrentBufferAsVector();
+			for (auto && pose : *pVecPoseOfObstacles) {
+				float x = -pose.getY() / 1000;
+				float y = -pose.getX() / 1000;
+				float th = atan2(y, x) + M_PI/2;
+				float d = pow(pow(x, 2) + pow(y, 2), 0.5) / 16 * 2 * M_PI;
+				D2D1::Matrix3x2F matObs = D2D1::Matrix3x2F::Rotation(th * 180 / M_PI) *
+					D2D1::Matrix3x2F::Translation(x, y);
+				m_pRenderTarget2->SetTransform(matObs * matScreen);
+				m_pRenderTarget2->FillEllipse(D2D1::Ellipse(D2D1::Point2F(0.0f, 0.0f), d, 0.1), m_pBrushRobotObstacle);
+			}
+
 			// Finish drawing
 			hr = m_pRenderTarget2->EndDraw();
 

@@ -14,7 +14,7 @@ wScale=0.5
 vMax=0.8
 wMax=2.4
 kappaMax=10
-aNormalMax=0.1
+aLateralMax=0.2
 
 # Path following control parameters
 kSatPath=0.3
