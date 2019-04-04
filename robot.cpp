@@ -450,7 +450,7 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 	}
 	else if (m_Params.controlMode == 1 || m_Params.controlMode == 2){
 		// Follows a path
-		float vd, vMaxPath;
+		float vd = 0.15, vMaxPath;
 		if (m_Params.controlMode == 1) {
 			// Constant vd
 			vd = m_Params.desiredPathSpeed;
