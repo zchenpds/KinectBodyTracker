@@ -576,7 +576,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
             m_hWnd = hWnd;
 
             // Init Direct2D
-            D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_pD2DFactory);
+            D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &m_pD2DFactory);
 
             // Get and initialize the default Kinect sensor
             InitializeDefaultSensor();
