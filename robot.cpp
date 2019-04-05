@@ -262,8 +262,8 @@ void Robot::updateState() // To do: add mutex.
 	m_State.tsWindows = GetTickCount64();
 
 	ArTime Time = m_pArRobot->getLastOdometryTime();
-	m_State.tsRobot = Time.getSecLL() * 1000ll + Time.getMSecLL();
-
+	INT64 tsRobotNew = Time.getSecLL() * 1000ll + Time.getMSecLL();
+	
 	float xVmNew = m_State.x + m_Params.VmDistance * cos(m_State.th + m_Params.VmHeading);
 	float yVmNew = m_State.y + m_Params.VmDistance * sin(m_State.th + m_Params.VmHeading);
 
@@ -275,9 +275,11 @@ void Robot::updateState() // To do: add mutex.
 		is_first = false;
 	}
 	else {
+		float dt = (tsRobotNew - m_State.tsRobot) / 1000.0; // Not used yet.
 		m_State.dist += pow(pow(xVmNew - m_State.xVm, 2) + pow(yVmNew - m_State.yVm, 2), 0.5);
 	}
 
+	m_State.tsRobot = tsRobotNew;
 	m_State.xVm = xVmNew;
 	m_State.yVm = yVmNew;
 	
@@ -529,34 +531,65 @@ void Robot::recordDesiredPath()
 
 bool Robot::predictState(RobotState * prs, float tSec)
 {
-	float x, y, th, v, w;
-	if (getControlMode() == 3) {
-		x = prs->x;
-		y = prs->y;
-		th = prs->th;
-		v = m_ControlCmd.v;
-		w = m_ControlCmd.v * m_ControlCmd.kappa;
-	}
-	else if (getControlMode() == 1) {
-		x = prs->x;
-		y = prs->y;
-		th = prs->th;
-		v = m_State.v;
-		w = m_State.w;
+	if (m_pPath && (getControlMode() == 1 || getControlMode() == 2)) {
+		// Predict by extrapolating the arc length on the path
+		geometry_msgs::Pose * pPose;
+		float vMaxPath;
+		float dx, dy, dRho, dTh;
+		
+		// Predict the pose expressed in the World Frame
+		if (prs->tsRobot == 0) {
+			prs->dist += m_State.dist;
+			prs->v = m_State.v;
+		}
+		prs->tsRobot += (INT64)(tSec * 1000); // the number of millisecs into the future
+		prs->dist += prs->v * tSec;
+		pPose = m_pPath->getPoseOnPath(prs->dist, &vMaxPath);
+		prs->v += saturate(vMaxPath - prs->v, -0.3f * tSec, 0.3f * tSec); // aLongitudinalMax = 0.3f;
+		
+		// Transform the pose to the Robot Frame
+		dx = pPose->position.x - m_State.x;
+		dy = pPose->position.y - m_State.y;
+		dRho = sqrt(pow(dx, 2) + pow(dy, 2));
+		dTh = atan2(dy, dx) - m_State.th;
+		prs->x = dRho * cos(dTh);
+		prs->y = dRho * sin(dTh);
+		prs->th = asin(pPose->orientation.z) * 2 - m_State.th;
 	}
 	else {
-		return false;
-	}
+		float x, y, th, v, w;
+		// Predict by numerical integration
+		if (getControlMode() == 3) {
+			x = prs->x;
+			y = prs->y;
+			th = prs->th;
+			v = m_ControlCmd.v;
+			w = m_ControlCmd.v * m_ControlCmd.kappa;
+		}
+#if 0
+		else if (getControlMode() == 1) {
+			x = prs->x;
+			y = prs->y;
+			th = prs->th;
+			v = m_State.v;
+			w = m_State.w;
+		}
+#endif
+		else {
+			return false;
+		}
 
-	float dt = 0.1;
-	for (float t = 0; t < tSec; t+= dt) {
-		x += v * cos(th) * dt;
-		y += v * sin(th) * dt;
-		th += w * dt;
+		float dt = 0.1;
+		for (float t = 0; t < tSec; t += dt) {
+			x += v * cos(th) * dt;
+			y += v * sin(th) * dt;
+			th += w * dt;
+		}
+		prs->x = x;
+		prs->y = y;
+		prs->th = th;
 	}
-	prs->x = x;
-	prs->y = y;
-	prs->th = th;
+	
 	return true;
 }
 
