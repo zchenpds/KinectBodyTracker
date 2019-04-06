@@ -551,8 +551,8 @@ bool Robot::predictState(RobotState * prs, float tSec)
 		prs->v += saturate(vMaxPath - prs->v, -0.3f * tSec, 0.3f * tSec); // aLongitudinalMax = 0.3f;
 		
 		// Transform the pose to the Robot Frame
-		dx = pPose->position.x - m_State.x;
-		dy = pPose->position.y - m_State.y;
+		dx = pPose->position.x - m_State.xVm;
+		dy = pPose->position.y - m_State.yVm;
 		dRho = sqrt(pow(dx, 2) + pow(dy, 2));
 		dTh = atan2(dy, dx) - m_State.th;
 		prs->x = dRho * cos(dTh);
