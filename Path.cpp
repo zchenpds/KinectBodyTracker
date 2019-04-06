@@ -225,7 +225,7 @@ namespace BodyTracker {
 			float turn_start_angle = -M_PI / 2;
 			x = x1 + radius * cos(turn_start_angle - angle_turned);
 			y = y1 + radius * sin(turn_start_angle - angle_turned);
-			th = -M_PI + angle_turned;
+			th = -M_PI - angle_turned;
 			maxV = vcc;
 		}
 
