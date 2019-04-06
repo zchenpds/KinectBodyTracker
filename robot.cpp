@@ -202,6 +202,9 @@ void Robot::setParams()
 		if (pathType.compare("PathEight") == 0) {
 			m_pPath = new BodyTracker::PathEight();
 		}
+		else if (pathType.compare("PathU") == 0) {
+			m_pPath = new BodyTracker::PathU();
+		}
 		else {
 			throw std::runtime_error("Robot::setParams() failed with error: Unknown path specified.\n\n");
 		}

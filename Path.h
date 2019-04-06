@@ -2,6 +2,7 @@
 
 #include <geometry_msgs\Pose.h>
 #include "Config.h"
+#include "Eigen/Geometry"
 
 #ifndef M_PI
 const double M_PI = 3.1415927;
@@ -41,6 +42,24 @@ namespace BodyTracker {
 	public:
 		PathEight();
 		~PathEight();
+		geometry_msgs::Pose *getPoseOnPath(double dist, float * pMaxV = NULL) override;
+		void setParams() override;
+		std::string getType() const override;
+	};
+
+	class PathU : public BasePath
+	{
+	private:
+		float straight_part_len;
+		float radius;
+
+		float curved_part_len;
+
+		float aLateralMax; // Maximum lateral acceleration
+		float aLongitudinalMax; // Maximum longitudinal acceleration
+
+	public:
+		PathU();
 		geometry_msgs::Pose *getPoseOnPath(double dist, float * pMaxV = NULL) override;
 		void setParams() override;
 		std::string getType() const override;
