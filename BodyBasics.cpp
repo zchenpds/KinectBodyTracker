@@ -58,30 +58,33 @@ int APIENTRY wWinMain(
 CBodyBasics::CBodyBasics() :
 	BaseLogger(),
 	m_pCalibState(CS_Inactive),
-    m_hWnd(NULL),
-    m_nStartTime(0),
-    m_nLastCounter(0),
-    m_nFramesSinceUpdate(0),
-    m_fFreq(0),
-    m_nNextStatusTime(0LL),
-    m_pKinectSensor(NULL),
-    m_pCoordinateMapper(NULL),
-    m_pBodyFrameReader(NULL),
-    m_pD2DFactory(NULL),
-    m_pRenderTarget(NULL),
-    m_pBrushJointTracked(NULL),
-    m_pBrushJointInferred(NULL),
-    m_pBrushBoneTracked(NULL),
-    m_pBrushBoneInferred(NULL),
-    m_pBrushHandClosed(NULL),
-    m_pBrushHandOpen(NULL),
-    m_pBrushHandLasso(NULL),
+	m_hWnd(NULL),
+	m_nStartTime(0),
+	m_nLastCounter(0),
+	m_nFramesSinceUpdate(0),
+	m_fFreq(0),
+	m_nNextStatusTime(0LL),
+	m_pKinectSensor(NULL),
+	m_pCoordinateMapper(NULL),
+	m_pBodyFrameReader(NULL),
+	m_pD2DFactory(NULL),
+	m_pRenderTarget(NULL),
+	m_pBrushJointTracked(NULL),
+	m_pBrushJointInferred(NULL),
+	m_pBrushBoneTracked(NULL),
+	m_pBrushBoneInferred(NULL),
+	m_pBrushHandClosed(NULL),
+	m_pBrushHandOpen(NULL),
+	m_pBrushHandLasso(NULL),
 	m_pRenderTarget2(NULL),
 	m_pBrushRobotBody(NULL),
 	m_pBrushRobotWheel(NULL),
 	m_pBrushRobotBodyPred(NULL),
 	m_pBrushRobotWheelPred(NULL),
 	m_pBrushRobotObstacle(NULL),
+	m_pBrushRobotTraversable(NULL),
+	m_bSonarRenderingEnabled(true),
+	m_bLaserRenderingEnabled(true),
 	m_pRosPublisher(NULL),
 	m_pRobot(NULL),
 	m_pSyncSocket(NULL)
@@ -280,6 +283,9 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 
 void CBodyBasics::setParams()
 {
+	Config* pConfig = Config::Instance();
+	pConfig->assign("sonar/renderingEnabled", m_bSonarRenderingEnabled);
+	pConfig->assign("laser/renderingEnabled", m_bLaserRenderingEnabled);
 	m_pRobot->setParams();
 }
 
@@ -1038,7 +1044,8 @@ HRESULT CBodyBasics::EnsureDirect2DResources2()
 		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Gray, 1.0f), &m_pBrushRobotWheel);
 		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LightPink, 1.0f), &m_pBrushRobotBodyPred);
 		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LightGray, 1.0f), &m_pBrushRobotWheelPred);
-		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LightGoldenrodYellow, 1.0f), &m_pBrushRobotObstacle);
+		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::DarkCyan, 1.0f), &m_pBrushRobotObstacle);
+		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White, 1.0f), &m_pBrushRobotTraversable);
 	}
 
 	return hr;
@@ -1213,6 +1220,10 @@ void CBodyBasics::RenderRobotSurroundings()
 	if (m_hWnd)
 	{
 		HRESULT hr = EnsureDirect2DResources2();
+		if (!m_pRobot) 
+			throw std::runtime_error(
+			"void CBodyBasics::RenderRobotSurroundings(): \n"
+			"m_pRobot not yet initialized.\n\n");
 
 		if (SUCCEEDED(hr) && m_pRenderTarget2)
 		{
@@ -1226,7 +1237,62 @@ void CBodyBasics::RenderRobotSurroundings()
 			// Map from robot frame coordinates to screen coordinates
 			D2D1::Matrix3x2F matScreen = D2D1::Matrix3x2F::Scale(150.0f, 150.0f) *
 				D2D1::Matrix3x2F::Translation(width / 2, height / 2);
+			
+			// Draw obstacles detected by SONAR
+			ArSonarDevice * pArSonar = m_pRobot->getSonar();
+			if (m_bSonarRenderingEnabled && pArSonar) {
+				std::vector<ArPoseWithTime> * pVecPoseOfObstacles = pArSonar->getCurrentBufferAsVector();
+				for (auto && pose : *pVecPoseOfObstacles) {
+					float x = -pose.getY() / 1000;
+					float y = -pose.getX() / 1000;
+					float th = atan2(y, x) + M_PI/2;
+					float d = sqrt(pow(x, 2) + pow(y, 2)) / 3;
+					D2D1::Matrix3x2F matObs = D2D1::Matrix3x2F::Rotation(th * 180 / M_PI) *
+						D2D1::Matrix3x2F::Translation(x, y);
+					m_pRenderTarget2->SetTransform(matObs * matScreen);
+					//m_pRenderTarget2->FillEllipse(D2D1::Ellipse(D2D1::Point2F(0.0f, 0.0f), d, 0.1), m_pBrushRobotObstacle);
+					m_pRenderTarget2->FillRectangle(D2D1::Rect(-d / 2, 0.05f, d / 2, -0.05f), m_pBrushRobotObstacle);
+				}
+			}
 
+			// Draw obstacles detected by Laser
+			Laser * pArLaser = m_pRobot->getLaser();
+			if (m_bLaserRenderingEnabled && pArLaser) { //
+				const std::vector<ArPoseWithTime> * pVecPoseOfObstacles = pArLaser->getCurrentBufferAsVector();
+				float x = pArLaser->getSensorPositionX();
+				float y = pArLaser->getSensorPositionY();
+				D2D1::Matrix3x2F matLaser = D2D1::Matrix3x2F::Translation(x, y);
+				m_pRenderTarget2->SetTransform(matScreen);
+				// Create a path geometry
+				ID2D1GeometrySink *pSink = NULL;
+				ID2D1PathGeometry *pPathGeometry;
+				hr = m_pD2DFactory->CreatePathGeometry(&pPathGeometry);
+				if (SUCCEEDED(hr) && pVecPoseOfObstacles->size() > 0) {
+					hr = pPathGeometry->Open(&pSink);
+					pSink->BeginFigure(
+						D2D1::Point2F(0, 0),
+						D2D1_FIGURE_BEGIN_FILLED
+					);
+					const float angleInc = M_PI / 180;
+					for (auto && pose : *pVecPoseOfObstacles) {
+						float x = -pose.getY() / 1000;
+						float y = -pose.getX() / 1000;
+						float th = atan2(y, x) + M_PI / 2;
+						float r = sqrt(pow(x, 2) + pow(y, 2));
+						float arcLen = r * angleInc / 2;
+						float dx = arcLen * cos(th);
+						float dy = arcLen * sin(th);
+						pSink->AddLine(D2D1::Point2F(x + dx, y + dy));
+						pSink->AddLine(D2D1::Point2F(x - dx, y - dy));
+					}
+					pSink->EndFigure(D2D1_FIGURE_END_CLOSED);
+					hr = pSink->Close();
+				}
+				SafeRelease(pSink);
+				m_pRenderTarget2->FillGeometry(pPathGeometry, m_pBrushRobotTraversable);
+				
+			}
+			
 			// Draw the robot at the origin
 			m_pRenderTarget2->SetTransform(matScreen);
 			DrawRobot(0);
@@ -1241,25 +1307,11 @@ void CBodyBasics::RenderRobotSurroundings()
 					D2D1::Matrix3x2F matPred = D2D1::Matrix3x2F::Rotation(-rState.th * 180.0 / M_PI) *
 						D2D1::Matrix3x2F::Translation(-rState.y, -rState.x);
 					m_pRenderTarget2->SetTransform(matPred * matScreen);
-					DrawRobot(1, 1/(t+1));
+					DrawRobot(1, 1 / (t + 1));
 				}
 				else {
 					break;
 				}
-			}
-
-			// Draw obstacles detected by SONAR
-			std::vector<ArPoseWithTime> * pVecPoseOfObstacles = m_pRobot->getSonar()->getCurrentBufferAsVector();
-			for (auto && pose : *pVecPoseOfObstacles) {
-				float x = -pose.getY() / 1000;
-				float y = -pose.getX() / 1000;
-				float th = atan2(y, x) + M_PI/2;
-				float d = sqrt(pow(x, 2) + pow(y, 2)) / 3;
-				D2D1::Matrix3x2F matObs = D2D1::Matrix3x2F::Rotation(th * 180 / M_PI) *
-					D2D1::Matrix3x2F::Translation(x, y);
-				m_pRenderTarget2->SetTransform(matObs * matScreen);
-				//m_pRenderTarget2->FillEllipse(D2D1::Ellipse(D2D1::Point2F(0.0f, 0.0f), d, 0.1), m_pBrushRobotObstacle);
-				m_pRenderTarget2->FillRectangle(D2D1::Rect(-d / 2, 0.05f, d / 2, -0.05f), m_pBrushRobotObstacle);
 			}
 
 			// Finish drawing

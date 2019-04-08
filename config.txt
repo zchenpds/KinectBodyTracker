@@ -2,7 +2,10 @@ ros_master=192.168.1.15:11411
 # This path must end with a backslash '\'
 dataPath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190320\data\
 
-robotPort=COM3
+# This group of params can only updated before startup
+robotPort=COM4
+laser/enabled=true
+laser/port=COM3
 
 desiredDistance=2.1
 
@@ -14,7 +17,7 @@ wScale=0.5
 vMax=0.8
 wMax=2.4
 kappaMax=10
-aLateralMax=0.2
+aLateralMax=0.3
 
 # Path following control parameters
 kSatPath=0.3
@@ -39,3 +42,10 @@ controlMode=1
 pathType=PathU
 PathU/straight_part_len=1.5
 PathU/radius=1.5
+
+# Rendering options
+sonar/renderingEnabled=true
+laser/renderingEnabled=true
+
+
+

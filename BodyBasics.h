@@ -143,6 +143,11 @@ private:
 	ID2D1SolidColorBrush*   m_pBrushRobotBodyPred;
 	ID2D1SolidColorBrush*   m_pBrushRobotWheelPred;
 	ID2D1SolidColorBrush*   m_pBrushRobotObstacle;
+	ID2D1SolidColorBrush*   m_pBrushRobotTraversable;
+
+	// Rendering options
+	bool					m_bSonarRenderingEnabled;
+	bool					m_bLaserRenderingEnabled;
 
 	//
 	SyncSocket*				m_pSyncSocket;

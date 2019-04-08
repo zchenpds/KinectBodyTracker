@@ -7,6 +7,7 @@
 #include "BaseLogger.h"
 #include "Path.h"
 #include <vector>
+#include "Laser.h"
 
 class ActionFollow;
 
@@ -77,6 +78,7 @@ protected:
 	//Aria stuff
 	ArRobot*                    m_pArRobot;
 	ArSonarDevice*				m_pSonar;
+	Laser*						m_pLaser;
 	ArAnalogGyro*				m_pGyro;
 	ArRobotConnector*           m_pRobotConn;
 	ArArgumentBuilder*          m_pArgs;
@@ -136,8 +138,9 @@ public:
 	std::function<void()> SIPcbFun;
 	bool predictState(RobotState * prs, float tSec);
 
-	// Get SONAR pointer
+	// Get SONAR/laser pointer
 	ArSonarDevice * getSonar();
+	Laser * getLaser();
 	
 };
 

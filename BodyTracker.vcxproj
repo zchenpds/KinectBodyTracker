@@ -23,6 +23,7 @@
     <ClCompile Include="BodyBasics.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ActionFollow.cpp" />
+    <ClCompile Include="Laser.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="robot.cpp" />
     <ClCompile Include="RosPublisher.cpp" />
@@ -42,6 +43,7 @@
     <ClInclude Include="BodyBasics.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ActionFollow.h" />
+    <ClInclude Include="Laser.h" />
     <ClInclude Include="Path.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="robot.h" />

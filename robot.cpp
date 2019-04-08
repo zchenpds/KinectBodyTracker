@@ -5,6 +5,8 @@
 Robot::Robot() :
 	BaseLogger(),
 	m_pArRobot(NULL),
+	m_pSonar(NULL),
+	m_pLaser(NULL),
 	m_pRobotConn(NULL),
 	m_pArgs(NULL),
 	m_pGyro(NULL),
@@ -43,6 +45,8 @@ Robot::Robot() :
 	m_ControlCmd.w = 0.0;
 	m_ControlCmd.kappa = 0.0;
 
+	Config* pConfig = Config::Instance();
+
 	// Initialize some global data
 	Aria::init();
 
@@ -54,13 +58,21 @@ Robot::Robot() :
 	// Load some default values for command line arguments from the ARIAARGS environment variable.
 	m_pParser->loadDefaultArguments();
 
-	m_pArgs->add("-laserPort %s", "COM3");
+	//m_pArgs->add("-laserPort %s", "COM3");
 	m_pArgs->add("-robotPort %s", "COM4");
 
 	// Central object that is an interface to the robot and its integrated
 	// devices, and which manages control of the robot by the rest of the program.
 	m_pArRobot = new ArRobot();
 	m_pSonar = new ArSonarDevice();
+
+	// Start laser range finder depending on the config
+	bool bLaserEnabled = false;
+	std::string strLaserPort = "COM3";
+	pConfig->assign("laser/enabled", bLaserEnabled);
+	pConfig->assign("laser/port", strLaserPort);
+	if (bLaserEnabled)
+		m_pLaser = new Laser(strLaserPort);
 
 	// Object that connects to the robot or simulator using program options
 	m_pRobotConn = new ArRobotConnector(m_pParser, m_pArRobot);
@@ -83,6 +95,7 @@ Robot::~Robot()
 	Aria::exit(1);
 	delete m_pRobotConn;
 	delete m_pSonar;
+	delete m_pLaser;
 	delete m_pGyro;
 	delete m_pArRobot;
 	delete m_pArgs;
@@ -599,4 +612,9 @@ bool Robot::predictState(RobotState * prs, float tSec)
 ArSonarDevice * Robot::getSonar()
 {
 	return m_pSonar;
+}
+
+Laser * Robot::getLaser()
+{
+	return m_pLaser;
 }
