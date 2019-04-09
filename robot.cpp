@@ -116,14 +116,15 @@ bool Robot::init(HWND hWnd)
 
 	// Connect to the robot, get some initial data from it such as type and name,
 	// and then load parameter files for this robot.
+	
 	if (!m_pRobotConn->connectRobot())
-	{
+	{/*
 		// Error connecting:
 		int msgboxID = MessageBox(hWnd, 
 			L"robot: Error connecting to the robot! COM port might be wrong.  Continue anyway?", 
 			NULL, MB_YESNO | MB_ICONWARNING);
 		if (msgboxID == IDNO)
-			DestroyWindow(hWnd);
+			DestroyWindow(hWnd);*/
 		return false;
 	}
 	if (!m_pArRobot->isConnected())

@@ -131,7 +131,7 @@ CBodyBasics::~CBodyBasics()
 {
 	delete m_pRobot;
 	delete m_pSyncSocket;
-	//delete m_pRosPublisher;
+	delete m_pRosPublisher;
 		
 
     DiscardDirect2DResources();
@@ -587,8 +587,10 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
             // Get and initialize the default Kinect sensor
             InitializeDefaultSensor();
 
-			// Create a ROS publisher
-			//m_pRosPublisher = new RosPublisher;
+			SetTimer(hWnd,             // handle to main window 
+				IDT_TIMER1,            // timer identifier 
+				100,                 // 10-second interval 
+				(TIMERPROC)NULL);     // no timer callback 
 
 			//
 			if (!m_pSyncSocket->init(hWnd)) break;
@@ -624,6 +626,19 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			}
 			break;
 		}
+
+		case WM_TIMER:
+			switch (wParam)
+			{
+			case IDT_TIMER1:
+				// process the 100-millisecond timer 
+				// Create a ROS publisher
+				if (!m_pRosPublisher)
+					m_pRosPublisher = new RosPublisher(m_pRobot);
+				m_pRosPublisher->publish();
+				break;
+			}
+			break;
 		case WM_COMMAND:
 			switch (wParam)
 			{
@@ -667,6 +682,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			if (m_pRobot && m_pRobot->getControlMode() == 3) {
 				m_pRobot->increaseKappaBy(wheelSpeed / 2000);
 			}
+			m_pRosPublisher->publish(); // debug
 		}
 			break;
 		case WM_MOUSEHWHEEL:
@@ -676,6 +692,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			if (m_pRobot && m_pRobot->getState()->isFollowing && m_pRobot->getControlMode() == 3) {
 				if (halt) m_pRobot->setCmdV(0.0f);
 				else m_pRobot->accelerateVBy(wheelSpeed / 6000);
+				m_pRosPublisher->publish(); // debug
 			}
 		}
 			break;

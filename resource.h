@@ -4,6 +4,7 @@
 //
 #define IDI_APP                         100
 #define IDD_APP                         100
+#define IDT_TIMER1                      102
 #define IDC_VIDEOVIEW                   1000
 #define IDC_STATUS                      1001
 #define IDC_VIDEOVIEW2                  1005
@@ -16,6 +17,6 @@
 #define _APS_NEXT_RESOURCE_VALUE        101
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1003
-#define _APS_NEXT_SYMED_VALUE           102
+#define _APS_NEXT_SYMED_VALUE           103
 #endif
 #endif

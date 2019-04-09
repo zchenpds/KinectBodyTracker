@@ -3,11 +3,13 @@
 #include <string>
 
 
-RosPublisher::RosPublisher(): 
+
+RosPublisher::RosPublisher(Robot * pRobot): 
 	cmd_vel_pub("cmd_vel", &twist_msg),
-	m_pszRosMaster(NULL)
+	m_pszRosMaster(NULL),
+	m_pRobot(pRobot)
 {
-	std::string strRosMaster("192.168.1.152:11411");
+	std::string strRosMaster("192.168.1.116:11411");
 	Config* pConfig = Config::Instance();
 	pConfig->assign("ros_master", strRosMaster);
 	m_pszRosMaster = new char[strRosMaster.length() + 1];
@@ -30,14 +32,14 @@ RosPublisher::~RosPublisher()
 }
 
 
-void RosPublisher::publish(float p[2])
+void RosPublisher::publish()
 {
-	twist_msg.linear.x = p[0];
+	twist_msg.linear.x = m_pRobot->m_ControlCmd.v;
 	twist_msg.linear.y = 0;
 	twist_msg.linear.z = 0;
 	twist_msg.angular.x = 0;
 	twist_msg.angular.y = 0;
-	twist_msg.angular.z = p[1];
+	twist_msg.angular.z = m_pRobot->m_ControlCmd.w;
 	cmd_vel_pub.publish(&twist_msg);
 
 	nh.spinOnce();

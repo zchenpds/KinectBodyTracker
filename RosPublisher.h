@@ -1,14 +1,16 @@
 #pragma once
 #include <stdio.h>
 #include "Config.h"
+#include "robot.h"
 
 class RosPublisher
 {
 public:
-	RosPublisher();
+	RosPublisher(Robot * pRobot);
 	~RosPublisher();
-	void publish(float p[2]);
+	void publish();
 private:
+	Robot*					m_pRobot;
 	ros::NodeHandle nh;
 	geometry_msgs::Twist    twist_msg;
 	ros::Publisher          cmd_vel_pub;

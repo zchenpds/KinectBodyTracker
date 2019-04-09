@@ -1,10 +1,10 @@
-ros_master=192.168.1.15:11411
+ros_master=192.168.1.116:11411
 # This path must end with a backslash '\'
 dataPath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190320\data\
 
 # This group of params can only updated before startup
-robotPort=COM4
-laser/enabled=true
+robotPort=COM3
+laser/enabled=false
 laser/port=COM3
 
 desiredDistance=2.1
@@ -33,7 +33,7 @@ desiredPathSpeed=0.3
 # 1: Fixed speed path following control
 # 2: Path following control with speed adjusted by the follower distance
 # 3: Mouse operated acceleration and steering.
-controlMode=1
+controlMode=3
 
 #pathType=PathEight
 #PathEight/half_dist_circle=1.3
