@@ -26,7 +26,7 @@
     <ClCompile Include="Laser.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="robot.cpp" />
-    <ClCompile Include="RosPublisher.cpp" />
+    <ClCompile Include="RosSocket.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\duration.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\time.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\WindowsSocket.cpp" />
@@ -47,7 +47,7 @@
     <ClInclude Include="Path.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="robot.h" />
-    <ClInclude Include="RosPublisher.h" />
+    <ClInclude Include="RosSocket.h" />
     <ClInclude Include="rosserial_windows\ros_lib\ros.h" />
     <ClInclude Include="rosserial_windows\ros_lib\WindowsSocket.h" />
     <ClInclude Include="stdafx.h" />

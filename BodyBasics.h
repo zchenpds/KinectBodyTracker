@@ -162,8 +162,8 @@ private:
 	HWND					m_hWndButtonExit;
 	HWND                    m_hWndStatic;
 
-	// ROS Publisher
-	RosPublisher*			m_pRosPublisher;
+	// ROS Socket
+	RosSocket*			m_pRosSocket;
 
 	//
 	// Define the states of a finite state machine

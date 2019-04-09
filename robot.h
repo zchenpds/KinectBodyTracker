@@ -74,7 +74,7 @@ typedef struct ControlCmd_ {
 
 class Robot : BaseLogger
 {
-	friend class RosPublisher;
+	friend class RosSocket;
 protected:
 	//Aria stuff
 	ArRobot*                    m_pArRobot;

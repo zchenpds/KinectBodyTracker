@@ -13,7 +13,7 @@
 #include <ctime>
 #include <string>
 #include <Windows.h>
-#include "RosPublisher.h" // Deprecated
+#include "RosSocket.h"
 #include "BodyBasics.h"
 #include "Config.h"
 #include "robot.h"
@@ -85,7 +85,7 @@ CBodyBasics::CBodyBasics() :
 	m_pBrushRobotTraversable(NULL),
 	m_bSonarRenderingEnabled(true),
 	m_bLaserRenderingEnabled(true),
-	m_pRosPublisher(NULL),
+	m_pRosSocket(NULL),
 	m_pRobot(NULL),
 	m_pSyncSocket(NULL)
 {
@@ -131,7 +131,7 @@ CBodyBasics::~CBodyBasics()
 {
 	delete m_pRobot;
 	delete m_pSyncSocket;
-	delete m_pRosPublisher;
+	delete m_pRosSocket;
 		
 
     DiscardDirect2DResources();
@@ -587,15 +587,10 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
             // Get and initialize the default Kinect sensor
             InitializeDefaultSensor();
 
-			SetTimer(hWnd,             // handle to main window 
-				IDT_TIMER1,            // timer identifier 
-				100,                 // 10-second interval 
-				(TIMERPROC)NULL);     // no timer callback 
-
 			//
-			if (!m_pSyncSocket->init(hWnd)) break;
-			if (!m_pRobot->init(hWnd)) break;
-
+			m_pSyncSocket->init(hWnd);
+			m_pRobot->init(hWnd);
+			m_pRosSocket = new RosSocket(m_pRobot);
 			SetFocus(hWnd);
         }
         break;
@@ -626,19 +621,6 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			}
 			break;
 		}
-
-		case WM_TIMER:
-			switch (wParam)
-			{
-			case IDT_TIMER1:
-				// process the 100-millisecond timer 
-				// Create a ROS publisher
-				if (!m_pRosPublisher)
-					m_pRosPublisher = new RosPublisher(m_pRobot);
-				m_pRosPublisher->publish();
-				break;
-			}
-			break;
 		case WM_COMMAND:
 			switch (wParam)
 			{
@@ -682,7 +664,6 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			if (m_pRobot && m_pRobot->getControlMode() == 3) {
 				m_pRobot->increaseKappaBy(wheelSpeed / 2000);
 			}
-			m_pRosPublisher->publish(); // debug
 		}
 			break;
 		case WM_MOUSEHWHEEL:
@@ -692,7 +673,6 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			if (m_pRobot && m_pRobot->getState()->isFollowing && m_pRobot->getControlMode() == 3) {
 				if (halt) m_pRobot->setCmdV(0.0f);
 				else m_pRobot->accelerateVBy(wheelSpeed / 6000);
-				m_pRosPublisher->publish(); // debug
 			}
 		}
 			break;
@@ -937,8 +917,6 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 		{
 			//m_pRobot->setCmd(cmd[0], cmd[1]); // debug
 		}
-
-		//m_pRosPublisher->publish(cmd);
 
 		WCHAR szStatusMessage[64];
 		StringCchPrintf(szStatusMessage, _countof(szStatusMessage),
