@@ -6,7 +6,7 @@ if isequal(filename1,0)
 end
 dataKinect = importKinectData([pathname1,filename1]);
 
-[filename2, pathname2] = uigetfile('data*Robot?.csv');
+[filename2, pathname2] = uigetfile([pathname1,filename2(1:22),'*Robot?.csv']);
 if isequal(filename2,0)
    disp('Cannot open data file. User selected Cancel');
    return
