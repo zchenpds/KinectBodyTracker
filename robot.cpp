@@ -276,8 +276,10 @@ void Robot::updateState() // To do: add mutex.
 	m_State.y = Pose.getY() / 1000.0;
 
 	// Find the theta corrected by the multiplicative factor
+	static float oldTh;
 	float newTh = Pose.getTh() * M_PI / 180.0;
-	float dTh = newTh - m_State.th;
+	float dTh = newTh - oldTh;
+	oldTh = newTh;
 	if (dTh > M_PI) dTh -= 2 * M_PI;
 	else if (dTh <= -M_PI) dTh += 2 * M_PI;
 	dTh *= m_Params.thCorrectionFactor;
