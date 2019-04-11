@@ -296,7 +296,15 @@ void Robot::updateState() // To do: add mutex.
 	}
 	else {
 		float dt = (tsRobotNew - m_State.tsRobot) / 1000.0; // Not used yet.
-		m_State.dist += pow(pow(xVmNew - m_State.xVm, 2) + pow(yVmNew - m_State.yVm, 2), 0.5);
+		float dxVm = xVmNew - m_State.xVm;
+		float dyVm = yVmNew - m_State.yVm;
+		float dDist = pow(pow(dxVm, 2) + pow(dyVm, 2), 0.5);
+		if (m_pPath) {
+			geometry_msgs::Pose *pPoseDesired = m_pPath->getPoseOnPath(m_State.dist);
+			float thDesired = asin(pPoseDesired->orientation.z) * 2;
+			dDist *= fabs(cos(thDesired - atan2(dyVm, dxVm)));
+		}
+		m_State.dist += dDist;
 	}
 
 	m_State.tsRobot = tsRobotNew;
