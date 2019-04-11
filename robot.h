@@ -14,7 +14,7 @@ class ActionFollow;
 typedef struct RobotState_ {
 	float			x; // meter
 	float			y; // meter
-	float			th; // rad
+	float			th; // rad from -2pi to pi
 	float			v; // meter/sec
 	float			w; // rad/sec
 	float			batteryVolt;

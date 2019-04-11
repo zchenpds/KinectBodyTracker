@@ -274,7 +274,17 @@ void Robot::updateState() // To do: add mutex.
 	// m_State.dist += pow(pow(Pose.getX() / 1000.0 - m_State.x, 2) + pow(Pose.getY() / 1000.0 - m_State.y, 2), 0.5);
 	m_State.x = Pose.getX() / 1000.0;
 	m_State.y = Pose.getY() / 1000.0;
-	m_State.th = Pose.getTh() * M_PI / 180.0 * m_Params.thCorrectionFactor;
+
+	// Find the theta corrected by the multiplicative factor
+	float newTh = Pose.getTh() * M_PI / 180.0;
+	float dTh = newTh - m_State.th;
+	if (dTh > M_PI) dTh -= 2 * M_PI;
+	else if (dTh <= -M_PI) dTh += 2 * M_PI;
+	dTh *= m_Params.thCorrectionFactor;
+	m_State.th += dTh;
+	if (m_State.th > M_PI) m_State.th -= 2 * M_PI;
+	else if (m_State.th <= -M_PI) m_State.th += 2 * M_PI;
+
 	m_State.v = m_pArRobot->getVel() / 1000.0;
 	m_State.w = m_pArRobot->getRotVel() * M_PI / 180.0;
 	m_State.batteryVolt = m_pArRobot->getRealBatteryVoltageNow();
