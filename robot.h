@@ -64,6 +64,8 @@ typedef struct ControlParams_ {
 	float			kSatRho;
 	float			kRho;
 	float			desiredPathSpeed;	
+	
+	float			thCorrectionFactor; // odometry/thCorrectionFactor=0.98
 } ControlParams, *pControlParams;
 
 typedef struct ControlCmd_ {

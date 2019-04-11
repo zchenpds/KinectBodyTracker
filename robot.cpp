@@ -39,6 +39,8 @@ Robot::Robot() :
 	m_Params.kRho = 1.0;
 	m_Params.desiredPathSpeed = 0.15;
 
+	m_Params.thCorrectionFactor = 1.0f;
+
 	resetVisualCmd();
 
 	m_ControlCmd.v = 0.0;
@@ -195,6 +197,7 @@ void Robot::setParams()
 	pConfig->assign("kSatRho", m_Params.kSatRho);
 	pConfig->assign("kRho", m_Params.kRho);
 	pConfig->assign("desiredPathSpeed", m_Params.desiredPathSpeed);
+	pConfig->assign("odometry/thCorrectionFactor", m_Params.thCorrectionFactor);
 
 	std::string StrRobotPort;
 	pConfig->assign("robotPort", StrRobotPort);
@@ -271,7 +274,7 @@ void Robot::updateState() // To do: add mutex.
 	// m_State.dist += pow(pow(Pose.getX() / 1000.0 - m_State.x, 2) + pow(Pose.getY() / 1000.0 - m_State.y, 2), 0.5);
 	m_State.x = Pose.getX() / 1000.0;
 	m_State.y = Pose.getY() / 1000.0;
-	m_State.th = Pose.getTh() * M_PI / 180.0;
+	m_State.th = Pose.getTh() * M_PI / 180.0 * m_Params.thCorrectionFactor;
 	m_State.v = m_pArRobot->getVel() / 1000.0;
 	m_State.w = m_pArRobot->getRotVel() * M_PI / 180.0;
 	m_State.batteryVolt = m_pArRobot->getRealBatteryVoltageNow();

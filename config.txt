@@ -28,6 +28,8 @@ kSatRho=0.5
 kRho=1.0
 desiredPathSpeed=0.3
 
+odometry/thCorrectionFactor=0.98
+
 # Control modes.
 # 0: Longitudal position control based on follower distance PLUS angular velocity control based on gesture
 # 1: Fixed speed path following control
