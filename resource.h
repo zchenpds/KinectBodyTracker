@@ -4,7 +4,6 @@
 //
 #define IDI_APP                         100
 #define IDD_APP                         100
-#define IDT_TIMER1                      102
 #define IDC_VIDEOVIEW                   1000
 #define IDC_STATUS                      1001
 #define IDC_VIDEOVIEW2                  1005

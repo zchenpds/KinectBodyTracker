@@ -590,7 +590,14 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			//
 			m_pSyncSocket->init(hWnd);
 			m_pRobot->init(hWnd);
-			m_pRosSocket = new RosSocket(m_pRobot);
+
+			// Enable RosSocket
+			Config * pConfig = Config::Instance();
+			bool bRosSocketEnabled;
+			pConfig->assign("RosSocket/enabled", bRosSocketEnabled);
+			if (bRosSocketEnabled)
+				m_pRosSocket = new RosSocket(m_pRobot);
+
 			SetFocus(hWnd);
         }
         break;

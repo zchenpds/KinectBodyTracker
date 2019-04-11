@@ -4,7 +4,7 @@
 Laser::Laser(const std::string & strPort) :
 	ArLMS2xx(0),
 	m_functorReadingCB(this, &Laser::readingCB),
-	isReadingReceived(false)
+	m_nReadingCount(0)
 {
 	if (m_ArConn.open(strPort.c_str()) != 0) {
 		throw std::runtime_error((std::string("Error opening serial port: ") + m_ArConn.getPort()).c_str());
@@ -40,5 +40,10 @@ void Laser::readingCB()
 	}
 	ArLog::log(ArLog::Normal, "\n");
 	*/
-	isReadingReceived = true;
+	m_nReadingCount++;
+}
+
+int Laser::getReadingCount()
+{
+	return m_nReadingCount;
 }

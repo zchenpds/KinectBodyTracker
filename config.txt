@@ -47,5 +47,6 @@ PathU/radius=1.5
 sonar/renderingEnabled=true
 laser/renderingEnabled=true
 
-
+# RosSocket
+RosSocket/enabled=true
 

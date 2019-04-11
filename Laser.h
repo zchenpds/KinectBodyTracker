@@ -6,10 +6,12 @@ class Laser : public ArLMS2xx
 private:
 	ArSerialConnection m_ArConn;
 	ArFunctorC<Laser> m_functorReadingCB;
-	bool isReadingReceived;
+	int m_nReadingCount;
+
 public:
 	Laser(const std::string & strPort);
 	~Laser();
 	void readingCB();
+	int getReadingCount();
 };
 

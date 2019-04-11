@@ -4,6 +4,7 @@
 #include "robot.h"
 #include <thread>
 #include <chrono>
+#include "sensor_msgs/LaserScan.h"
 
 class RosSocket
 {
@@ -13,10 +14,13 @@ public:
 	void threadProc();
 private:
 	Robot*					m_pRobot;
-	ros::NodeHandle nh;
-	geometry_msgs::Twist    twist_msg;
-	ros::Publisher          cmd_vel_pub;
+	ros::NodeHandle			nh;
 	char*                   m_pszRosMaster;
 	std::thread				m_Thread;
+
+	// Laser
+	sensor_msgs::LaserScan	m_MsgLaser;
+	ros::Publisher			m_PubLaser;
+	
 };
 
