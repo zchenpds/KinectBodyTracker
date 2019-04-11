@@ -1,7 +1,7 @@
 close all;
 clear;
 run('importData');
-if importDataSuccess == false
+if importDataFailedAt > 0 
     return;
 end
 %% Vicon data preprocessing

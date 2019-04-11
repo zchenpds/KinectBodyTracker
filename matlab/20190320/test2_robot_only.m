@@ -2,7 +2,7 @@
 close all;
 clear;
 run('importData.m')
-if importDataSuccess == false
+if importDataFailedAt == 1 || importDataFailedAt == 2
     return;
 end
 %% Draw trajectory as recorded by odometry
@@ -37,6 +37,10 @@ ylabel('w(rad/s)')
 legend({'Actual', 'Desired'});
 title('Angular speed');
 %% Vicon
+if importDataFailedAt == 3
+    return;
+end
+
 xR_V = (dataVicon.X1 + dataVicon.X2 + dataVicon.X3 + dataVicon.X4 + dataVicon.X5) / 5 / 1000;
 yR_V = (dataVicon.Y1 + dataVicon.Y2 + dataVicon.Y3 + dataVicon.Y4 + dataVicon.Y5) / 5 / 1000;
 
