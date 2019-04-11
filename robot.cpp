@@ -307,16 +307,32 @@ void Robot::updateState() // To do: add mutex.
 		is_first = false;
 	}
 	else {
-		float dt = (tsRobotNew - m_State.tsRobot) / 1000.0; // Not used yet.
 		float dxVm = xVmNew - m_State.xVm;
 		float dyVm = yVmNew - m_State.yVm;
-		float dDist = pow(pow(dxVm, 2) + pow(dyVm, 2), 0.5);
+		float distGuess = m_State.dist + pow(pow(dxVm, 2) + pow(dyVm, 2), 0.5);
+		
 		if (m_pPath) {
-			geometry_msgs::Pose *pPoseDesired = m_pPath->getPoseOnPath(m_State.dist);
-			float thDesired = asin(pPoseDesired->orientation.z) * 2;
-			dDist *= fabs(cos(thDesired - atan2(dyVm, dxVm)));
+			// Golden-section search for the closest point on the path
+			const float guessRange = 0.2f, goldenRatio = 1.618f;
+			const float tolerance = 1e-3;
+			float a = distGuess - guessRange;
+			float b = distGuess + guessRange;
+			float c = b - (b - a) / goldenRatio;
+			float d = a + (b - a) / goldenRatio;
+			while (fabs(c - d) > tolerance) {
+				geometry_msgs::Pose * pPoseDesired;
+				pPoseDesired = m_pPath->getPoseOnPath(c);
+				float fc = asin(pPoseDesired->orientation.z) * 2;
+				pPoseDesired = m_pPath->getPoseOnPath(d);
+				float fd = asin(pPoseDesired->orientation.z) * 2;
+				if (fc < fd) b = d;
+				else a = c;
+				c = b - (b - a) / goldenRatio;
+				d = a + (b - a) / goldenRatio;
+			}
+			distGuess = (b + a) / 2;
 		}
-		m_State.dist += dDist;
+		m_State.dist = distGuess;
 	}
 
 	m_State.tsRobot = tsRobotNew;
