@@ -322,9 +322,9 @@ void Robot::updateState() // To do: add mutex.
 			while (fabs(c - d) > tolerance) {
 				geometry_msgs::Pose * pPoseDesired;
 				pPoseDesired = m_pPath->getPoseOnPath(c);
-				float fc = asin(pPoseDesired->orientation.z) * 2;
+				float fc = sqrt(pow(pPoseDesired->position.x - m_State.xVm, 2) - pow(pPoseDesired->position.y - m_State.yVm, 2));
 				pPoseDesired = m_pPath->getPoseOnPath(d);
-				float fd = asin(pPoseDesired->orientation.z) * 2;
+				float fd = sqrt(pow(pPoseDesired->position.x - m_State.xVm, 2) - pow(pPoseDesired->position.y - m_State.yVm, 2));
 				if (fc < fd) b = d;
 				else a = c;
 				c = b - (b - a) / goldenRatio;
