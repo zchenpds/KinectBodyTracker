@@ -50,5 +50,5 @@ sonar/renderingEnabled=true
 laser/renderingEnabled=true
 
 # RosSocket
-RosSocket/enabled=true
+RosSocket/enabled=false
 

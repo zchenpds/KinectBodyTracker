@@ -191,7 +191,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 	GetWindowRect(GetDlgItem(m_hWnd, IDC_VIDEOVIEW), &rc);
 	int heightButton = 40, widthButton = 180;
 	const int xButtonLeft = rc.left + 20;
-	const int yButtonTop = rc.bottom + 100;
+	const int yButtonTop = rc.bottom + 40;
 	const int yButtonSep = 20, xButtonSep = 30;
 	const int yButtonBottom = yButtonTop + (heightButton + yButtonSep) * 1.5;
 
@@ -925,9 +925,11 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			//m_pRobot->setCmd(cmd[0], cmd[1]); // debug
 		}
 
+
 		WCHAR szStatusMessage[64];
 		StringCchPrintf(szStatusMessage, _countof(szStatusMessage),
-			L" FPS = %0.2f; Time = %.0f s", fps, (nTime - m_nStartTime) / 1.0e7);
+			L" FPS = %0.2f; Time = %.0f s; Sync = %d", 
+			fps, (nTime - m_nStartTime) / 1.0e7, m_pSyncSocket->m_nPacketCount);
 
 		if (SetStatusMessage(szStatusMessage, 500, false))
 		{
