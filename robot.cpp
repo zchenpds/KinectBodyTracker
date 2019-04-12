@@ -271,15 +271,12 @@ void Robot::updateState() // To do: add mutex.
 
 	ArPose Pose;
 	Pose = m_pArRobot->getPose();
-	// m_State.dist += pow(pow(Pose.getX() / 1000.0 - m_State.x, 2) + pow(Pose.getY() / 1000.0 - m_State.y, 2), 0.5);
-	m_State.x = Pose.getX() / 1000.0;
-	m_State.y = Pose.getY() / 1000.0;
 
 	// Find the theta corrected by the multiplicative factor
-	static float oldTh;
-	float newTh = Pose.getTh() * M_PI / 180.0;
-	float dTh = newTh - oldTh;
-	oldTh = newTh;
+	static float thOld;
+	float thNew = Pose.getTh() * M_PI / 180.0;
+	float dTh = thNew - thOld;
+	thOld = thNew;
 	if (dTh > M_PI) dTh -= 2 * M_PI;
 	else if (dTh <= -M_PI) dTh += 2 * M_PI;
 	dTh *= m_Params.thCorrectionFactor;
@@ -287,6 +284,17 @@ void Robot::updateState() // To do: add mutex.
 	if (m_State.th > M_PI) m_State.th -= 2 * M_PI;
 	else if (m_State.th <= -M_PI) m_State.th += 2 * M_PI;
 
+	// Update x and y
+	static float xOld, yOld;
+	float xNew = Pose.getX() / 1000.0;
+	float yNew = Pose.getY() / 1000.0;
+	float dXY = sqrt(pow(xNew - xOld, 2) + pow(yNew - yOld, 2));
+	xOld = xNew;
+	yOld = yNew;
+	m_State.x += dXY * cos(m_State.th);
+	m_State.y += dXY * sin(m_State.th);
+
+	// Update v and w
 	m_State.v = m_pArRobot->getVel() / 1000.0;
 	m_State.w = m_pArRobot->getRotVel() * M_PI / 180.0;
 	m_State.batteryVolt = m_pArRobot->getRealBatteryVoltageNow();
@@ -311,7 +319,7 @@ void Robot::updateState() // To do: add mutex.
 		float dyVm = yVmNew - m_State.yVm;
 		float distGuess = m_State.dist + pow(pow(dxVm, 2) + pow(dyVm, 2), 0.5);
 		
-		if (m_pPath) {
+		if (0 && m_pPath) {
 			// Golden-section search for the closest point on the path
 			const float guessRange = 0.2f, goldenRatio = 1.618f;
 			const float tolerance = 1e-3;
