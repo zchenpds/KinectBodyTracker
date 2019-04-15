@@ -1,9 +1,10 @@
 #pragma once
 #include <map>
 #include <string>
+#include "Eigen/core"
 
 typedef std::map<std::string, std::string> ConfigParams;
-
+const float FLOAT_EPSILON = 1e-4;
 // This class is a singleton class. Its life is for the duration of this application.
 
 class Config
@@ -27,6 +28,7 @@ public:
 	bool assign(const std::string & strKey, double & fValue);
 	bool assign(const std::string & strKey, bool & bValue);
 	bool assign(const std::string & strKey, int & iValue);
+	bool assign(const std::string & strKey, Eigen::Ref<Eigen::Vector3f> vecFloat);
 
 	static void resetCounter();
 	static int getUpdateCount();

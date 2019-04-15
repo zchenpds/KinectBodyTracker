@@ -30,7 +30,16 @@ typedef struct RobotState_ {
 
 	bool			isFollowing;
 	bool			isCalibrating;
-	//ArMutex			mutex;
+	// debug
+	float			thDesired;
+	float			xError;
+	float			yError;
+	float			vx;
+	float			vy;
+	float			vNew;
+	float			wNew;
+	float			xVmDesired;
+	float			yVmDesired;
 } RobotState;
 typedef const RobotState *pcRobotState;
 

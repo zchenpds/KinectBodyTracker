@@ -1,6 +1,6 @@
 ros_master=192.168.1.116:11411
 # This path must end with a backslash '\'
-dataPath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190320\data\
+dataPath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190415\data\
 
 # This group of params can only updated before startup
 robotPort=COM3
@@ -52,4 +52,11 @@ renderTarget2/frame=world
 
 # RosSocket
 RosSocket/enabled=false
+
+# tfKR
+TFs/tfKR/pos=-0.17, 0.0, 0.72
+
+#simulator
+simulator/SpeedUpFactor=10
+simulator/StepLength=100
 

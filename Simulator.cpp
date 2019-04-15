@@ -4,8 +4,13 @@
 
 Simulator::Simulator(Robot* pRobot):
 	m_pRobot(pRobot),
-	m_Thread(&Simulator::threadProc, this)
+	m_Thread(&Simulator::threadProc, this),
+	m_iSpeedUpFactor(1),
+	m_iStepLength(100),
+	m_iStepCounter(0)
 {
+	Config::Instance()->assign("simulator/SpeedUpFactor", m_iSpeedUpFactor);
+	Config::Instance()->assign("simulator/StepLength", m_iStepLength); // in milliseconds
 }
 
 
@@ -33,7 +38,8 @@ void Simulator::threadProc()
 		}
 		updateState(v, w);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		m_iStepCounter++;
+		std::this_thread::sleep_for(std::chrono::milliseconds(m_iStepLength / m_iSpeedUpFactor));
 	}
 }
 
@@ -48,9 +54,8 @@ void Simulator::updateState(float v, float w)
 		return;
 	}
 	else {
-		INT64 tsNew = GetTickCount64();
-		dt = (tsNew - rs.tsWindows) / 1000.0;
-		rs.tsWindows = tsNew;
+		dt = m_iStepLength / 1000.0;
+		rs.tsWindows += m_iStepLength;
 	}
 
 	// Update v and w
@@ -117,7 +122,7 @@ void Simulator::updateState(float v, float w)
 
 	m_pRobot->log();
 
-	if (m_pRobot->SIPcbFun) {
+	if (m_pRobot->SIPcbFun && m_iStepCounter%m_iSpeedUpFactor ==0) {
 		m_pRobot->SIPcbFun();
 	}
 }

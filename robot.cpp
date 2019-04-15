@@ -264,6 +264,15 @@ void Robot::log(bool bHeader)
 	conditionalLog("vScale", m_Params.vScale, bHeader);
 	conditionalLog("wScale", m_Params.wScale, bHeader);
 	conditionalLog("distDesired", m_Params.desiredDistance, bHeader);
+	conditionalLog("thDesired", m_State.thDesired, bHeader);
+	conditionalLog("xError", m_State.xError, bHeader);
+	conditionalLog("yError", m_State.yError, bHeader);
+	conditionalLog("vx", m_State.vx, bHeader);
+	conditionalLog("vy", m_State.vy, bHeader);
+	conditionalLog("vNew", m_State.vNew, bHeader);
+	conditionalLog("wNew", m_State.wNew, bHeader);
+	conditionalLog("xVmD", m_State.xVmDesired, bHeader);
+	conditionalLog("yVmD", m_State.yVmDesired, bHeader);
 	logEOL();
 }
 
@@ -535,14 +544,27 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 			throw std::runtime_error("Path is not yet instantiated.\n\n");
 		
 		geometry_msgs::Pose *pPoseDesired = m_pPath->getPoseOnPath(m_State.dist, &vMaxPath);
-		vd = saturate(vd, 0.0f, vMaxPath);
 		double thDesired = asin(pPoseDesired->orientation.z) * 2;
 		double xError = pPoseDesired->position.x - m_State.xVm;
 		double yError = pPoseDesired->position.y - m_State.yVm;
 		double vx = vd * cos(thDesired) + m_Params.kSatPath * tanh(m_Params.kPath * xError / m_Params.kSatPath);
 		double vy = vd * sin(thDesired) + m_Params.kSatPath * tanh(m_Params.kPath * yError / m_Params.kSatPath);
-		m_ControlCmd.v = vx * cos(m_State.th) + vy * sin(m_State.th);
-		m_ControlCmd.w = -vx * sin(m_State.th) / m_Params.VmDistance + vy * cos(m_State.th) / m_Params.VmDistance;
+		float vNew = vx * cos(m_State.th) + vy * sin(m_State.th);
+		float wNew = -vx * sin(m_State.th) / m_Params.VmDistance + vy * cos(m_State.th) / m_Params.VmDistance;
+
+		// debug
+		m_State.thDesired = thDesired;
+		m_State.xError = xError;
+		m_State.yError = yError;
+		m_State.vx = vx;
+		m_State.vy = vy;
+		m_State.vNew = vNew;
+		m_State.wNew = wNew;
+		m_State.xVmDesired = pPoseDesired->position.x;
+		m_State.yVmDesired = pPoseDesired->position.y;
+
+		m_ControlCmd.v = saturate(vNew, 0.0f, min(m_Params.vMax, vMaxPath));
+		m_ControlCmd.w = wNew / vNew * m_ControlCmd.v;
 		if (pV != NULL) *pV = m_ControlCmd.v;
 		if (pW != NULL) *pW = m_ControlCmd.w;
 	}

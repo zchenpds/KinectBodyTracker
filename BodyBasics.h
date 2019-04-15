@@ -67,10 +67,33 @@ struct TFs {
 	float tau;
 	INT64 timeDiffWithRobot;
 
-	TFs(): tau(-0.05f) {
+	struct tfKRParams {
+		Eigen::Vector3f pos; // translation vector
+		Eigen::Vector3f eul; // Euler angles, x, y, x
+		tfKRParams(std::array<float, 6> arr) :
+			pos({ arr[0], arr[1], arr[2] }),
+			eul({ arr[3], arr[4], arr[5] })
+		{}
+		tfKRParams operator+(const tfKRParams & rhs) {
+			tfKRParams ret({});
+			ret.pos = pos + rhs.pos;
+			ret.eul = pos + rhs.eul;
+			return ret;
+		}
+	};
+	tfKRParams tfKRNominal, tfKRCorrection; //nominal value and additive correction for constructing tfKR
+
+	TFs(): 
+		tau(-1.05f),
+		tfKRNominal({ -0.15f, 0.0f, 0.7f, M_PI / 2, -M_PI / 2, 0.0f }),
+		tfKRCorrection({})
+	{
+		setParams();
+		
 		tfKR = Eigen::Translation3f(-0.15f, 0.0f, 0.7f) 
 			* Eigen::AngleAxisf(M_PI / 2, Eigen::Vector3f::UnitX())
-			* Eigen::AngleAxisf(-M_PI / 2, Eigen::Vector3f::UnitY());
+			* Eigen::AngleAxisf(-M_PI / 2, Eigen::Vector3f::UnitY())
+			* Eigen::AngleAxisf(0.0f, Eigen::Vector3f::UnitX());
 	}
 
 	void updateRW(Robot * pRobot, float tsWindows) {
@@ -85,6 +108,22 @@ struct TFs {
 
 	Eigen::Vector3f operator*(Eigen::Ref<Eigen::Vector3f> vec) {
 		return tfRW * tfKR * vec;
+	}
+
+	void setParams() {
+		Config* pConfig = Config::Instance();
+		pConfig->assign("TFs/tfKR/pos", tfKRNominal.pos);
+		pConfig->assign("TFs/tfKR/eul", tfKRNominal.eul);
+		updateTfKR();
+	}
+
+	void updateTfKR() {
+		tfKRParams params = tfKRNominal + tfKRCorrection;
+		tfKR = Eigen::Translation3f(params.pos)
+			* Eigen::AngleAxisf(params.eul(0), Eigen::Vector3f::UnitX())
+			* Eigen::AngleAxisf(params.eul(1), Eigen::Vector3f::UnitY())
+			* Eigen::AngleAxisf(params.eul(2), Eigen::Vector3f::UnitX());
+
 	}
 };
 

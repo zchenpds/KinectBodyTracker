@@ -71,7 +71,7 @@ bool Config::assign(const std::string & strKey, float & fValue)
 	else
 	{
 		float fValueNew = stof(m_mapParams[strKey]);
-		if (fValue != fValueNew)
+		if (fabs(fValue - fValueNew) > FLOAT_EPSILON)
 		{
 			m_countUpdates++;
 			fValue = fValueNew;
@@ -89,7 +89,7 @@ bool Config::assign(const std::string & strKey, double & fValue)
 	else
 	{
 		double fValueNew = stof(m_mapParams[strKey]);
-		if (fValue != fValueNew)
+		if (fabs(fValue - fValueNew) > FLOAT_EPSILON)
 		{
 			m_countUpdates++;
 			fValue = fValueNew;
@@ -132,6 +132,32 @@ bool Config::assign(const std::string & strKey, int & iValue)
 			iValue = iValueNew;
 		}
 		return true; // Succeeded in assigning the config parameter
+	}
+}
+
+bool Config::assign(const std::string & strKey, Eigen::Ref<Eigen::Vector3f> fVector)
+{
+	ConfigParams::iterator it;
+	it = m_mapParams.find(strKey);
+	if (it == m_mapParams.end())
+		return false; // Failed to find the parameter.
+	else
+	{
+		std::stringstream ss(it->second);
+		int i = 0;
+		float fValueNew;
+		char sep;
+		while (ss.good() && i < 3) {
+			
+			ss >> fValueNew >> sep;
+			if (fabs(fVector(i) - fValueNew) > FLOAT_EPSILON) {
+				fVector(i) = fValueNew;
+				m_countUpdates++;
+			}
+			i++;
+		}
+		if (i > 0) return true; // Succeeded in assigning the config parameter
+		else return false;
 	}
 }
 
