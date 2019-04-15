@@ -8,6 +8,7 @@
 #include "Path.h"
 #include <vector>
 #include "Laser.h"
+#include "Simulator.h"
 
 class ActionFollow;
 
@@ -77,6 +78,7 @@ typedef struct ControlCmd_ {
 class Robot : BaseLogger
 {
 	friend class RosSocket;
+	friend class Simulator;
 protected:
 	//Aria stuff
 	ArRobot*                    m_pArRobot;
@@ -95,6 +97,7 @@ protected:
 	std::vector<ArAction*>		m_vecpArActionLimiters;
 	HWND						m_hWnd;
 	BodyTracker::BasePath*		m_pPath;
+	Simulator*					m_pSimulator;
 public:
 public:
 	Robot();
@@ -104,7 +107,7 @@ public:
 	int getControlMode();
 	void log(bool bHeader = false) override;
 	void updateState();
-	RobotState * getState(); // debug
+	pcRobotState getState();
 	bool isConnected();
 
 	void setCmdV(float v, float maxV = 1.6);

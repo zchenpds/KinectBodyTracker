@@ -198,7 +198,7 @@ namespace BodyTracker {
 			x = dist;
 			y = 0;
 			th = 0;
-			maxV = sqrt(2 * aLongitudinalMax * (distEndpoints[0] - dist) + vcc * vcc);
+			maxV = sqrt(2 * aLongitudinalMax * fmin(distEndpoints[0] - dist, dist) + vcc * vcc);
 		}
 		else if (dist < distEndpoints[1]) {
 			float x1 = straight_part_len;
@@ -216,7 +216,7 @@ namespace BodyTracker {
 			x = straight_part_len - seg_dist;
 			y = - 2 * radius;
 			th = -M_PI;
-			maxV = sqrt(2 * aLongitudinalMax * (distEndpoints[2] - dist) + vcc * vcc);
+			maxV = sqrt(2 * aLongitudinalMax * fmin(distEndpoints[2] - dist, dist - distEndpoints[1]) + vcc * vcc);
 		}
 		else {
 			float x1 = 0;

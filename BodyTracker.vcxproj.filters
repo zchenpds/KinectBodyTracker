@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="ActionFollow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseLogger.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="BodyBasics.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="rosserial_windows\ros_lib\duration.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="Laser.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="Path.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="robot.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="RosSocket.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="SyncSocket.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="rosserial_windows\ros_lib\time.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="rosserial_windows\ros_lib\WindowsSocket.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="Simulator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="rosserial_windows\ros_lib\WindowsSocket.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="SyncSocket.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="RosSocket.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="rosserial_windows\ros_lib\ros.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="robot.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="Path.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="Laser.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="BodyBasics.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseLogger.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="ActionFollow.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="Simulator.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="BodyBasics.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="app.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{e2079dbb-62d8-4ab5-b991-f7f66b9ca4ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{6a11de12-e2a2-4de2-bbe8-9eaf529c800a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -13,7 +13,8 @@ Robot::Robot() :
 	m_pParser(NULL),
 	m_pActionFollow(NULL),
 	m_hWnd(NULL),
-	m_pPath(NULL) // will not be instantiated until the first time setParams() is invoked
+	m_pPath(NULL), // will not be instantiated until the first time setParams() is invoked
+	m_pSimulator(NULL)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
 	m_State.isFollowing = false;
@@ -108,6 +109,7 @@ Robot::~Robot()
 		m_vecpArActionLimiters.pop_back();
 	}
 	delete m_pPath;
+	delete m_pSimulator;
 }
 
 bool Robot::init(HWND hWnd)
@@ -127,6 +129,8 @@ bool Robot::init(HWND hWnd)
 			NULL, MB_YESNO | MB_ICONWARNING);
 		if (msgboxID == IDNO)
 			DestroyWindow(hWnd);
+		else
+			m_pSimulator = new Simulator(this);
 		return false;
 	}
 	if (!m_pArRobot->isConnected())
@@ -348,10 +352,13 @@ void Robot::updateState() // To do: add mutex.
 	m_State.yVm = yVmNew;
 	
 	log();
-	//m_pArRobot->unlock();
+
+	if (SIPcbFun) {
+		SIPcbFun();
+	}
 }
 
-RobotState * Robot::getState() // debug pcRobotState
+pcRobotState Robot::getState()
 {
 	return &m_State;
 }
@@ -384,8 +391,6 @@ void Robot::accelerateVBy(float deltaV)
 	// Assume we are in controlMode 3
 	float maxV = sqrt(m_Params.aLateralMax / fabs(m_ControlCmd.kappa));
 	setCmdV(m_ControlCmd.v + deltaV, maxV);
-	if (!isConnected() && SIPcbFun)
-		SIPcbFun();
 }
 
 void Robot::increaseKappaBy(float deltaKappa)
@@ -393,8 +398,6 @@ void Robot::increaseKappaBy(float deltaKappa)
 	// Assume we are in controlMode 3
 	float maxKappa = m_Params.aLateralMax / pow(m_ControlCmd.v, 2);
 	setCmdKappa(m_ControlCmd.kappa + deltaKappa, maxKappa);
-	if (!isConnected() && SIPcbFun)
-		SIPcbFun();
 }
 
 bool Robot::toggleFollowing()
@@ -549,9 +552,6 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 		if (pW != NULL) *pW = m_ControlCmd.w;
 	}
 
-	if (SIPcbFun) {
-		SIPcbFun();
-	}
 }
 
 void Robot::resetVisualCmd()
@@ -662,8 +662,7 @@ INT64 Robot::estimateState(RobotState * prs, INT64 tsWindows)
 	prs->tsWindows = tsWindows;
 
 	float dt;
-	if (isConnected()) dt = (tsWindows - m_State.tsWindows) / 1000;
-	else dt = 0; // debug
+	dt = (tsWindows - m_State.tsWindows) / 1000.0;
 	prs->x = m_State.x + m_State.v * cos(m_State.th) * dt;
 	prs->y = m_State.y + m_State.v * sin(m_State.th) * dt;
 	prs->th = m_State.th + m_State.w * dt;

@@ -671,8 +671,6 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			if (m_pRobot && m_pRobot->getControlMode() == 3) {
 				m_pRobot->increaseKappaBy(wheelSpeed / 2000);
 			}
-			if (m_pRobot && m_pRobot->isConnected() == false)
-				m_pRobot->getState()->th += wheelSpeed / 2000;// debug
 		}
 			break;
 		case WM_MOUSEHWHEEL:
@@ -682,10 +680,6 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			if (m_pRobot && m_pRobot->getState()->isFollowing && m_pRobot->getControlMode() == 3) {
 				if (halt) m_pRobot->setCmdV(0.0f);
 				else m_pRobot->accelerateVBy(wheelSpeed / 6000);
-			}
-			if (m_pRobot && m_pRobot->isConnected() == false) {
-				m_pRobot->getState()->x += wheelSpeed / 2000 * cos(m_pRobot->getState()->th); // debug
-				m_pRobot->getState()->y += wheelSpeed / 2000 * sin(m_pRobot->getState()->th); // debug
 			}
 		}
 			break;

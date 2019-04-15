@@ -26,7 +26,7 @@ kPath=1.0
 # Distance keeping control paramters
 kSatRho=0.5
 kRho=1.0
-desiredPathSpeed=0.3
+desiredPathSpeed=0.75
 
 odometry/thCorrectionFactor=0.98
 
@@ -35,15 +35,15 @@ odometry/thCorrectionFactor=0.98
 # 1: Fixed speed path following control
 # 2: Path following control with speed adjusted by the follower distance
 # 3: Mouse operated acceleration and steering.
-controlMode=3
+controlMode=1
 
 #pathType=PathEight
 #PathEight/half_dist_circle=1.3
 #PathEight/radius=0.7
 
 pathType=PathU
-PathU/straight_part_len=1.5
-PathU/radius=1.5
+PathU/straight_part_len=2.5
+PathU/radius=1.25
 
 # Rendering options
 sonar/renderingEnabled=true

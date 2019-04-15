@@ -30,6 +30,7 @@
     <ClCompile Include="rosserial_windows\ros_lib\duration.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\time.cpp" />
     <ClCompile Include="rosserial_windows\ros_lib\WindowsSocket.cpp" />
+    <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="SyncSocket.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -50,6 +51,7 @@
     <ClInclude Include="RosSocket.h" />
     <ClInclude Include="rosserial_windows\ros_lib\ros.h" />
     <ClInclude Include="rosserial_windows\ros_lib\WindowsSocket.h" />
+    <ClInclude Include="Simulator.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SyncSocket.h" />
   </ItemGroup>
