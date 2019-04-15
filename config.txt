@@ -48,6 +48,7 @@ PathU/radius=1.5
 # Rendering options
 sonar/renderingEnabled=true
 laser/renderingEnabled=true
+renderTarget2/frame=world
 
 # RosSocket
 RosSocket/enabled=false

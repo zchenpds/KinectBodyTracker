@@ -271,7 +271,7 @@ void Robot::updateState() // To do: add mutex.
 
 	ArPose Pose;
 	Pose = m_pArRobot->getPose();
-
+	
 	// Find the theta corrected by the multiplicative factor
 	static float thOld;
 	float thNew = Pose.getTh() * M_PI / 180.0;
@@ -351,7 +351,7 @@ void Robot::updateState() // To do: add mutex.
 	//m_pArRobot->unlock();
 }
 
-pcRobotState Robot::getState()
+RobotState * Robot::getState() // debug pcRobotState
 {
 	return &m_State;
 }
@@ -655,6 +655,20 @@ bool Robot::predictState(RobotState * prs, float tSec)
 	}
 	
 	return true;
+}
+
+INT64 Robot::estimateState(RobotState * prs, INT64 tsWindows)
+{
+	prs->tsWindows = tsWindows;
+
+	float dt;
+	if (isConnected()) dt = (tsWindows - m_State.tsWindows) / 1000;
+	else dt = 0; // debug
+	prs->x = m_State.x + m_State.v * cos(m_State.th) * dt;
+	prs->y = m_State.y + m_State.v * sin(m_State.th) * dt;
+	prs->th = m_State.th + m_State.w * dt;
+
+	return tsWindows - m_State.tsWindows;
 }
 
 ArSonarDevice * Robot::getSonar()

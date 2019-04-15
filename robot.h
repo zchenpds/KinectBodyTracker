@@ -104,7 +104,7 @@ public:
 	int getControlMode();
 	void log(bool bHeader = false) override;
 	void updateState();
-	pcRobotState getState();
+	RobotState * getState(); // debug
 	bool isConnected();
 
 	void setCmdV(float v, float maxV = 1.6);
@@ -140,6 +140,7 @@ public:
 
 	std::function<void()> SIPcbFun;
 	bool predictState(RobotState * prs, float tSec);
+	INT64 estimateState(RobotState * prs, INT64 tsWindows);
 
 	// Get SONAR/laser pointer
 	ArSonarDevice * getSonar();

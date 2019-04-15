@@ -12,24 +12,81 @@
 #include "SyncSocket.h"
 #include "robot.h"
 #include "BaseLogger.h"
+#include <array>
 
-const std::map <JointType, const char * > jointTypeMap = {
-	{JointType_KneeLeft, "kneeL"}, 
-	{JointType_AnkleLeft, "ankleL"},
-	{JointType_FootLeft, "footL"},
-	{JointType_KneeRight, "kneeR"},
-	{JointType_AnkleRight, "ankleR"}, 
-	{JointType_FootRight, "footR"} };
+const std::map <const JointType, const char * > jointTypeMap = {
+	{JointType_KneeLeft, "LKnee"},
+	{JointType_AnkleLeft, "LAnkle"},
+	{JointType_FootLeft, "LFoot"},
+	{JointType_KneeRight, "RKnee"},
+	{JointType_AnkleRight, "RAnkle"},
+	{JointType_FootRight, "RFoot"} 
+};
 
-const int JOINT_DATA_SIZE = 6*3;
+const int JOINT_DATA_SIZE = jointTypeMap.size() * 3;
 
-typedef struct JointData_ {
-	float		data[JOINT_DATA_SIZE];
-	std::string	names[JOINT_DATA_SIZE];
-	INT64		tsKinect;	// (nTime - m_nStartTime) / 10000
-	INT64		tsWindows;	// GetTickCount64()
-	INT64		tsWindowsBase;
-} JointData;
+struct JointData {
+	std::vector<float>			data;
+	std::vector<std::string>	names;
+	INT64						tsKinect;	// (nTime - m_nStartTime) / 10000
+	INT64						tsWindows;	// GetTickCount64()
+	INT64						tsWindowsBase;
+	std::map < JointType, int > jointIndexMap;
+
+	// constructor
+	JointData(const char * prefix = ""):
+		tsKinect(0), 
+		tsWindows(0),
+		tsWindowsBase(GetTickCount64())
+	{
+		data.reserve(JOINT_DATA_SIZE);
+		for (int i = 0; i < JOINT_DATA_SIZE; i++)
+			data.push_back(0.0f);
+		names.reserve(JOINT_DATA_SIZE);
+		for (auto &jt : jointTypeMap)
+		{
+			jointIndexMap[jt.first] = names.size();
+			names.push_back(prefix + std::string(jt.second) + "X");
+			names.push_back(prefix + std::string(jt.second) + "Y");
+			names.push_back(prefix + std::string(jt.second) + "Z");
+		}
+	}
+
+	std::array<float, 3> operator[](const JointType type) {
+		std::array<float, 3> ret;
+		int i = jointIndexMap[type];
+		ret[0] = data[i + 0];
+		ret[1] = data[i + 1];
+		ret[2] = data[i + 2];
+		return ret;
+	}
+};
+
+struct TFs {
+	Eigen::Affine3f tfRW, tfKR;
+	float tau;
+	INT64 timeDiffWithRobot;
+
+	TFs(): tau(-0.05f) {
+		tfKR = Eigen::Translation3f(-0.15f, 0.0f, 0.7f) 
+			* Eigen::AngleAxisf(M_PI / 2, Eigen::Vector3f::UnitX())
+			* Eigen::AngleAxisf(-M_PI / 2, Eigen::Vector3f::UnitY());
+	}
+
+	void updateRW(Robot * pRobot, float tsWindows) {
+		RobotState RSEstimated;
+		timeDiffWithRobot = pRobot->estimateState(&RSEstimated, tsWindows + tau);
+		updateRW(RSEstimated.x, RSEstimated.y, RSEstimated.th);
+	}
+
+	void updateRW(float x, float y, float th) {
+		tfRW = Eigen::Translation3f(x, y, 0.0f) * Eigen::AngleAxisf(th, Eigen::Vector3f::UnitZ());
+	}
+
+	Eigen::Vector3f operator*(Eigen::Ref<Eigen::Vector3f> vec) {
+		return tfRW * tfKR * vec;
+	}
+};
 
 void ErrorExit(LPTSTR lpszFunction)
 {
@@ -144,15 +201,19 @@ private:
 	ID2D1SolidColorBrush*   m_pBrushRobotWheelPred;
 	ID2D1SolidColorBrush*   m_pBrushRobotObstacle;
 	ID2D1SolidColorBrush*   m_pBrushRobotTraversable;
+	ID2D1SolidColorBrush*   m_pBrushJoint2;
 
 	// Rendering options
 	bool					m_bSonarRenderingEnabled;
 	bool					m_bLaserRenderingEnabled;
+	std::string				m_strRenderTarget2Frame; // "world" or "robot".
 
 	//
 	SyncSocket*				m_pSyncSocket;
 	Robot*					m_pRobot;
-	JointData				m_JointData;
+	JointData				m_JointDataK; // relative to a Kinect frame
+	JointData				m_JointDataW; // relative to a World frame
+	TFs						m_TFs;
 
 	// Interface
 	HWND					m_hWndButtonFollow;
@@ -259,6 +320,9 @@ private:
 	// Draws a robot
 	void RenderRobotSurroundings();
 	void DrawRobot(int drawType, float opacity = 1.0);
+
+	// Transform the coordinates from the Kinect frame to the World frame.
+	void KinectToWorld(const CameraSpacePoint & CSP, Eigen::Ref<Eigen::Vector3f> WFP);
 
 };
 

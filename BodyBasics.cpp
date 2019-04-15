@@ -83,10 +83,14 @@ CBodyBasics::CBodyBasics() :
 	m_pBrushRobotWheelPred(NULL),
 	m_pBrushRobotObstacle(NULL),
 	m_pBrushRobotTraversable(NULL),
+	m_pBrushJoint2(NULL),
 	m_bSonarRenderingEnabled(true),
 	m_bLaserRenderingEnabled(true),
+	m_strRenderTarget2Frame("robot"),
 	m_pRosSocket(NULL),
 	m_pRobot(NULL),
+	m_JointDataK("K"),
+	m_JointDataW("W"),
 	m_pSyncSocket(NULL)
 {
     LARGE_INTEGER qpf = {0};
@@ -98,7 +102,7 @@ CBodyBasics::CBodyBasics() :
 	//*m_pKinectFile << "123" << std::endl; // Test write
 	
 	Config::Instance()->assign("dataPath", s_strDataPath);
-	
+	Config::Instance()->assign("renderTarget2/frame", m_strRenderTarget2Frame);
 
 	m_pSyncSocket = new SyncSocket();
 	m_pRobot = new Robot();
@@ -108,15 +112,7 @@ CBodyBasics::CBodyBasics() :
 	
 	m_pRobot->recordDesiredPath();
 
-	ZeroMemory(&m_JointData, sizeof(m_JointData));
-	m_JointData.tsWindowsBase = GetTickCount64();
-	int i = 0;
-	for (auto &jt : jointTypeMap)
-	{
-		m_JointData.names[i++] = std::string(jt.second) + "X";
-		m_JointData.names[i++] = std::string(jt.second) + "Y";
-		m_JointData.names[i++] = std::string(jt.second) + "Z";
-	}
+	
 
 	openDataFile("Kinect");
 	log(true); //log header
@@ -286,6 +282,7 @@ void CBodyBasics::setParams()
 	Config* pConfig = Config::Instance();
 	pConfig->assign("sonar/renderingEnabled", m_bSonarRenderingEnabled);
 	pConfig->assign("laser/renderingEnabled", m_bLaserRenderingEnabled);
+	pConfig->assign("renderTarget2/frame", m_strRenderTarget2Frame);
 	m_pRobot->setParams();
 }
 
@@ -296,12 +293,15 @@ void CBodyBasics::log(bool bHeader)
 	conditionalLog("trigger", m_pSyncSocket->m_tsSquareWave, bHeader);
 	//conditionalLog("cntY", m_pSyncSocket->m_nPacketCount, bHeader);
 	//conditionalLog("cntN", m_pSyncSocket->m_nNoPacketCount, bHeader);
-	conditionalLog("tK", m_JointData.tsKinect, bHeader);
-	conditionalLog("tKW", m_JointData.tsWindows, bHeader);
+	conditionalLog("tK", m_JointDataK.tsKinect, bHeader);
+	conditionalLog("tKW", m_JointDataK.tsWindows, bHeader);
 
 	for (int i = 0; i < JOINT_DATA_SIZE; i++)
-		conditionalLog(m_JointData.names[i].c_str(), m_JointData.data[i], bHeader);
-	
+		conditionalLog(m_JointDataK.names[i].c_str(), m_JointDataK.data[i], bHeader);
+
+	conditionalLog("tDiffR", m_TFs.timeDiffWithRobot, bHeader);
+	for (int i = 0; i < JOINT_DATA_SIZE; i++)
+		conditionalLog(m_JointDataW.names[i].c_str(), m_JointDataW.data[i], bHeader);
 	logEOL();
 }
 
@@ -671,6 +671,8 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			if (m_pRobot && m_pRobot->getControlMode() == 3) {
 				m_pRobot->increaseKappaBy(wheelSpeed / 2000);
 			}
+			if (m_pRobot && m_pRobot->isConnected() == false)
+				m_pRobot->getState()->th += wheelSpeed / 2000;// debug
 		}
 			break;
 		case WM_MOUSEHWHEEL:
@@ -680,6 +682,10 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			if (m_pRobot && m_pRobot->getState()->isFollowing && m_pRobot->getControlMode() == 3) {
 				if (halt) m_pRobot->setCmdV(0.0f);
 				else m_pRobot->accelerateVBy(wheelSpeed / 6000);
+			}
+			if (m_pRobot && m_pRobot->isConnected() == false) {
+				m_pRobot->getState()->x += wheelSpeed / 2000 * cos(m_pRobot->getState()->th); // debug
+				m_pRobot->getState()->y += wheelSpeed / 2000 * sin(m_pRobot->getState()->th); // debug
 			}
 		}
 			break;
@@ -750,6 +756,8 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 	float dSqrMin = 25.0; // squared x-z-distance of the closest body
 	INT64 t0Windows = GetTickCount64();
 
+	if (m_pRobot && m_pRobot->isConnected() == false)
+		RenderRobotSurroundings(); //debug
 
     if (m_hWnd)
     {
@@ -864,7 +872,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 					cnt++;
 				}
 			}
-
+			assert(m_pRobot);
 			// updateVisualCmd
 			if (m_pRobot->getControlMode() == 0) {
 				// This mode allows for gesture-based heading control
@@ -899,16 +907,28 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			}
 			
 			
-			// Get data ready for recording
-			m_JointData.tsWindows = GetTickCount64(); // For now not to be logged.
-			m_JointData.tsKinect = (nTime - m_nStartTime) / 10000;
-			// Write joint states to the struct
+			// Populate the containers with data to be recorded
+			m_JointDataW.tsWindows = m_JointDataK.tsWindows = GetTickCount64();
+			m_JointDataW.tsKinect = m_JointDataK.tsKinect = (nTime - m_nStartTime) / 10000;
+
 			int i = 0;
 			for (auto const &jt : jointTypeMap)
 			{
-				m_JointData.data[i++] = joints[jt.first].Position.X;
-				m_JointData.data[i++] = joints[jt.first].Position.Y;
-				m_JointData.data[i++] = joints[jt.first].Position.Z;
+				// Record joint coordinates in Kinect frame
+				const CameraSpacePoint & CSPoint = joints[jt.first].Position;
+				m_JointDataK.data[i + 0] = CSPoint.X;
+				m_JointDataK.data[i + 1] = CSPoint.Y;
+				m_JointDataK.data[i + 2] = CSPoint.Z;
+
+				// Transform the coordinates from the Kinect frame to the world frame
+				m_TFs.updateRW(m_pRobot, m_JointDataW.tsWindows); // update the tf with robot state
+				Eigen::Vector3f KFPoint(CSPoint.X, CSPoint.Y, CSPoint.Z); // Kinect frame point
+				Eigen::Vector3f WFPoint = m_TFs * KFPoint; // Convert it to a world frame point
+				m_JointDataW.data[i + 0] = WFPoint(0);
+				m_JointDataW.data[i + 1] = WFPoint(1);
+				m_JointDataW.data[i + 2] = WFPoint(2);
+
+				i += 3;
 			}
 
 			// Record data if following is on
@@ -919,10 +939,6 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			
 			calibrate();
 				
-		}
-		else
-		{
-			//m_pRobot->setCmd(cmd[0], cmd[1]); // debug
 		}
 
 
@@ -1050,6 +1066,7 @@ HRESULT CBodyBasics::EnsureDirect2DResources2()
 		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::LightGray, 1.0f), &m_pBrushRobotWheelPred);
 		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::DarkCyan, 1.0f), &m_pBrushRobotObstacle);
 		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White, 1.0f), &m_pBrushRobotTraversable);
+		m_pRenderTarget2->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Green, 1.0f), &m_pBrushJoint2);
 	}
 
 	return hr;
@@ -1077,6 +1094,12 @@ void CBodyBasics::DiscardDirect2DResources2()
 	SafeRelease(m_pRenderTarget2);
 
 	SafeRelease(m_pBrushRobotBody);
+	SafeRelease(m_pBrushRobotWheel);
+	SafeRelease(m_pBrushRobotBodyPred);
+	SafeRelease(m_pBrushRobotWheelPred);
+	SafeRelease(m_pBrushRobotObstacle);
+	SafeRelease(m_pBrushRobotTraversable);
+	SafeRelease(m_pBrushJoint2);
 }
 
 /// <summary>
@@ -1239,8 +1262,29 @@ void CBodyBasics::RenderRobotSurroundings()
 			int height = rtSize.height;
 
 			// Map from robot frame coordinates to screen coordinates
-			D2D1::Matrix3x2F matScreen = D2D1::Matrix3x2F::Scale(150.0f, 150.0f) *
+			D2D1::Matrix3x2F matScreen = D2D1::Matrix3x2F::Scale(150.0f, -150.0f) *
+				D2D1::Matrix3x2F::Rotation(-90) *
 				D2D1::Matrix3x2F::Translation(width / 2, height / 2);
+			D2D1::Matrix3x2F matScreenRobot = matScreen;
+			if (m_strRenderTarget2Frame.compare("world") == 0) {
+				// Zoom out a little bit
+				matScreen = D2D1::Matrix3x2F::Scale(0.5f, 0.5f) * matScreen;
+
+				// Update tf from robot frame to world frame
+				pcRobotState prs = m_pRobot->getState();
+				matScreenRobot = D2D1::Matrix3x2F::Rotation(prs->th * 180.0 / M_PI) *
+					D2D1::Matrix3x2F::Translation(prs->x, prs->y) * matScreen;
+
+				// Draw the ankles if joint data is not too old
+				if (GetTickCount64() - m_JointDataW.tsWindows < 200) {
+					m_pRenderTarget2->SetTransform(matScreen);
+					std::array<float, 3> posAL = m_JointDataW[JointType_AnkleLeft],
+						posAR = m_JointDataW[JointType_AnkleRight];
+					m_pRenderTarget2->FillEllipse(D2D1::Ellipse(D2D1::Point2F(posAL[0], posAL[1]), 0.1, 0.1), m_pBrushJoint2);
+					m_pRenderTarget2->FillEllipse(D2D1::Ellipse(D2D1::Point2F(posAR[0], posAR[1]), 0.1, 0.1), m_pBrushJoint2);
+				}
+				
+			}
 			
 			// Draw obstacles detected by SONAR
 			ArSonarDevice * pArSonar = m_pRobot->getSonar();
@@ -1253,7 +1297,7 @@ void CBodyBasics::RenderRobotSurroundings()
 					float d = sqrt(pow(x, 2) + pow(y, 2)) / 3;
 					D2D1::Matrix3x2F matObs = D2D1::Matrix3x2F::Rotation(th * 180 / M_PI) *
 						D2D1::Matrix3x2F::Translation(x, y);
-					m_pRenderTarget2->SetTransform(matObs * matScreen);
+					m_pRenderTarget2->SetTransform(matObs * matScreenRobot);
 					//m_pRenderTarget2->FillEllipse(D2D1::Ellipse(D2D1::Point2F(0.0f, 0.0f), d, 0.1), m_pBrushRobotObstacle);
 					m_pRenderTarget2->FillRectangle(D2D1::Rect(-d / 2, 0.05f, d / 2, -0.05f), m_pBrushRobotObstacle);
 				}
@@ -1266,7 +1310,7 @@ void CBodyBasics::RenderRobotSurroundings()
 				float x = pArLaser->getSensorPositionX();
 				float y = pArLaser->getSensorPositionY();
 				D2D1::Matrix3x2F matLaser = D2D1::Matrix3x2F::Translation(x, y);
-				m_pRenderTarget2->SetTransform(matScreen);
+				m_pRenderTarget2->SetTransform(matScreenRobot);
 				// Create a path geometry
 				ID2D1GeometrySink *pSink = NULL;
 				ID2D1PathGeometry *pPathGeometry;
@@ -1298,7 +1342,7 @@ void CBodyBasics::RenderRobotSurroundings()
 			}
 			
 			// Draw the robot at the origin
-			m_pRenderTarget2->SetTransform(matScreen);
+			m_pRenderTarget2->SetTransform(matScreenRobot);
 			DrawRobot(0);
 
 			// Draw predicted state of the robot
@@ -1308,9 +1352,9 @@ void CBodyBasics::RenderRobotSurroundings()
 			for (float dt : { 0.5f, 0.5f, 0.5f}) {
 				t += dt;
 				if (m_pRobot->predictState(&rState, dt)) {
-					D2D1::Matrix3x2F matPred = D2D1::Matrix3x2F::Rotation(-rState.th * 180.0 / M_PI) *
-						D2D1::Matrix3x2F::Translation(-rState.y, -rState.x);
-					m_pRenderTarget2->SetTransform(matPred * matScreen);
+					D2D1::Matrix3x2F matPred = D2D1::Matrix3x2F::Rotation(rState.th * 180.0 / M_PI) *
+						D2D1::Matrix3x2F::Translation(rState.x, rState.y);
+					m_pRenderTarget2->SetTransform(matPred * matScreenRobot);
 					DrawRobot(1, 1 / (t + 1));
 				}
 				else {
@@ -1351,11 +1395,11 @@ void CBodyBasics::DrawRobot(int drawType, float opacity)
 	pBrushBody->SetOpacity(opacity);
 
 	// Draw robot wheels
-	const float xWheel = 0.38 / 2, yWheel = 0.26 / 2; // wheel shift in x and y
+	const float xWheel = 0.26 / 2, yWheel = 0.38 / 2; // wheel shift in x and y
 	const float hwWheel = 0.05, rWheel = 0.11; // half width and radius of the wheels
 	for (float x : { -xWheel, xWheel }) {
 		for (float y : { -yWheel, yWheel }) {
-			D2D1_RECT_F rectWheel = D2D1::Rect(x - hwWheel, y + rWheel, x + hwWheel, y - rWheel);
+			D2D1_RECT_F rectWheel = D2D1::Rect(x - rWheel, y +  hwWheel, x + rWheel, y - hwWheel);
 			D2D1_ROUNDED_RECT rrectWheel = D2D1::RoundedRect(rectWheel, 0.02, 0.02);
 			m_pRenderTarget2->FillRoundedRectangle(rrectWheel, pBrushWheel);
 		}
@@ -1363,7 +1407,14 @@ void CBodyBasics::DrawRobot(int drawType, float opacity)
 
 	// Draw robot body
 	const float wBody = 0.38, lBody = 0.5;
-	D2D1_RECT_F rectBody = D2D1::Rect(-wBody / 2, lBody / 2, wBody / 2, -lBody / 2);
+	D2D1_RECT_F rectBody = D2D1::Rect(-lBody / 2, wBody / 2, lBody / 2, - wBody / 2);
 	D2D1_ROUNDED_RECT rrectBody = D2D1::RoundedRect(rectBody, 0.1, 0.1);
 	m_pRenderTarget2->FillRoundedRectangle(rrectBody, pBrushBody);
+}
+
+// Not in use for now
+void CBodyBasics::KinectToWorld(const CameraSpacePoint & CSP, Eigen::Ref<Eigen::Vector3f> WFP)
+{
+	Eigen::Vector3f KFP(CSP.X, CSP.Y, CSP.Z);
+	WFP = m_TFs.tfKR * m_TFs.tfRW * KFP;
 }
