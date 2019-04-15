@@ -304,8 +304,11 @@ void Robot::updateState() // To do: add mutex.
 	float dXY = sqrt(pow(xNew - xOld, 2) + pow(yNew - yOld, 2));
 	xOld = xNew;
 	yOld = yNew;
-	m_State.x += dXY * cos(m_State.th);
-	m_State.y += dXY * sin(m_State.th);
+	if (dXY > 0) {
+		dXY *= sgn(cos(atan2(yNew - yOld, xNew - xOld) - Pose.getThRad()));
+		m_State.x += dXY * cos(m_State.th);
+		m_State.y += dXY * sin(m_State.th);
+	}
 
 	// Update v and w
 	m_State.v = m_pArRobot->getVel() / 1000.0;

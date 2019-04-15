@@ -65,3 +65,7 @@ template<typename T>
 T saturate(T VAL, T MIN, T MAX) {
 	return min(max(VAL, MIN), MAX);
 }
+
+template <typename T> int sgn(T val) {
+	return (T(0) < val) - (val < T(0));
+}
