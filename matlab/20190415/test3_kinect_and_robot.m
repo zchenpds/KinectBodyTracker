@@ -1,4 +1,6 @@
 %% Initialize variables.
+clear;
+clc;
 [filename1, pathname1] = uigetfile('data*Kinect?.csv');
 if isequal(filename1,0)
    disp('Cannot open data file. User selected Cancel');
@@ -6,54 +8,55 @@ if isequal(filename1,0)
 end
 dataKinect = importKinectData([pathname1,filename1]);
 
-[filename2, pathname2] = uigetfile([pathname1,filename2(1:22),'*Robot?.csv']);
+[filename2, pathname2] = uigetfile([pathname1,filename1(1:22),'*Robot?.csv']);
 if isequal(filename2,0)
    disp('Cannot open data file. User selected Cancel');
    return
 end
 dataRobot = importRobotData([pathname2,filename2]);
 
-%% Subtract the base time from timestamps
-t0 = dataRobot.tRW(1);
-dataKinect.tKW = (dataKinect.tKW - t0) / 1000;
-dataRobot.tRW = (dataRobot.tRW - t0) / 1000;
-
-%% Exclude data where following is disabled, if these are not calib data
-if ~contains(filename1, 'calib')
-    dataRobot = dataRobot(dataRobot.isFollowing == 1, :);
-    dataKinect = dataKinect( dataKinect.tKW > dataRobot.tRW(1) ...
-        & dataKinect.tKW < dataRobot.tRW(end), :);
-end
+%%
+t0 = dataKinect.tK(1);
+ts = (dataKinect.tK - t0) / 1000;
 
 %%
-
-xRo = interp1(dataRobot.tRW, dataRobot.x, dataKinect.tKW);
-yRo = interp1(dataRobot.tRW, dataRobot.y, dataKinect.tKW);
-dRo = (xRo.^2 + yRo.^2).^0.5;
-
-
-%% z, Left foot and ankle
+close all;
 figure;
-subplot(2, 1, 1);
-h11 = plot(dataKinect.tKW, dataKinect.ankleLZ, '.-');
+ax1 = subplot(3, 1, 1);
+h11 = plot(ts, dataKinect.WLAnkleX, '.-');
 hold on;
-h12 = plot(dataKinect.tKW, dataKinect.ankleRZ, '.-');
-h13 = plot(dataKinect.tKW, dataKinect.footLZ, '.-');
-h14 = plot(dataKinect.tKW, dataKinect.footRZ, '.-');
+h12 = plot(ts, dataKinect.WRAnkleX, '.-');
 grid on;
-legend([h11, h12, h13, h14], "ankleLZ", "ankleLZ", "footLZ", "footRZ")
+legend([h11, h12], "WLAnkleX", "WRAnkleX")
 ylabel("Coordinates (m)")
 xlabel("Time (s)");
 
-subplot(2, 1, 2);
-h21 = plot(dataKinect.tKW, xRo, '.-');
-hold on
-h22 = plot(dataRobot.tRW, dataRobot.x, 'x-');
-legend([h21, h22], "Interpolated x_R_o", "Raw x_R_o")
+ax2 = subplot(3, 1, 2);
+h11 = plot(ts, dataKinect.WLAnkleY, '.-');
+hold on;
+h12 = plot(ts, dataKinect.WRAnkleY, '.-');
 grid on;
+legend([h11, h12], "WLAnkleY", "WRAnkleY")
 ylabel("Coordinates (m)")
 xlabel("Time (s)");
 
 
+ax3 = subplot(3, 1, 3);
+h11 = plot(ts, dataKinect.WLAnkleZ, '.-');
+hold on;
+h12 = plot(ts, dataKinect.WRAnkleZ, '.-');
+grid on;
+legend([h11, h12], "WLAnkleZ", "WRAnkleZ")
+ylabel("Coordinates (m)")
+xlabel("Time (s)");
+
+linkaxes([ax1, ax2, ax3], 'x');
+%%
+figure;
+h11 = plot3(dataKinect.WLAnkleX, dataKinect.WLAnkleY, dataKinect.WLAnkleZ, 'o');
+hold on;
+h12 = plot3(dataKinect.WRAnkleX, dataKinect.WRAnkleY, dataKinect.WRAnkleZ, '*');
+legend([h11, h12], "Left ankle", "Right ankle")
+view(0,90);
 
 

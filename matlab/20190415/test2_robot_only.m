@@ -18,7 +18,7 @@ legend({'Actual path', 'Desired path'});
 title('Trajectory as recorded by odometry');
 %% Plot speed vs time
 figure;
-subplot(2, 1, 1)
+ax1 = subplot(2, 1, 1);
 t = (dataRobot.tRW - dataRobot.tRW(1))/1e3;
 plot(t, dataRobot.v)
 hold on
@@ -28,7 +28,7 @@ ylabel('v(m/s)')
 legend({'Actual', 'Desired'});
 title('Linear speed');
 
-subplot(2, 1, 2)
+ax2 = subplot(2, 1, 2);
 plot(t, dataRobot.w)
 hold on
 plot(t, dataRobot.wD)
@@ -36,6 +36,8 @@ xlabel('t(s)')
 ylabel('w(rad/s)')
 legend({'Actual', 'Desired'});
 title('Angular speed');
+
+linkaxes([ax1, ax2], 'x');
 %% Vicon
 if importDataFailedAt == 3
     return;
