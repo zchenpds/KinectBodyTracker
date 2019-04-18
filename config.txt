@@ -17,7 +17,7 @@ wScale=0.5
 vMax=0.8
 wMax=2.4
 kappaMax=10
-aLateralMax=0.3
+aLateralMax=0.25
 
 # Path following control parameters
 kSatPath=0.3
@@ -26,9 +26,9 @@ kPath=1.0
 # Distance keeping control paramters
 kSatRho=0.5
 kRho=1.0
-desiredPathSpeed=0.75
+desiredPathSpeed=0.85
 
-odometry/thCorrectionFactor=0.98
+odometry/thCorrectionFactor=0.983
 
 # Control modes.
 # 0: Longitudal position control based on follower distance PLUS angular velocity control based on gesture
@@ -46,7 +46,7 @@ PathU/straight_part_len=2.5
 PathU/radius=1.25
 
 # Rendering options
-sonar/renderingEnabled=true
+sonar/renderingEnabled=false
 laser/renderingEnabled=true
 renderTarget2/frame=world
 
@@ -54,7 +54,7 @@ renderTarget2/frame=world
 RosSocket/enabled=false
 
 # tfKR
-TFs/tfKR/pos=-0.17, 0.0, 0.72
+TFs/tfKR/pos=-0.17, 0.08, 0.92
 
 #simulator
 simulator/SpeedUpFactor=1
