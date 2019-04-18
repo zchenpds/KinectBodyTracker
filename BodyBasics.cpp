@@ -329,7 +329,6 @@ void CBodyBasics::calibrate()
 			// --- Start Calibration ---
 			
 			m_pRobot->setCalibRobotLogging(true);
-
 			// Let the robot stand still
 			const Move m0 = { 0, 2.5f, (float)M_PI, 0.0f, 0.0f };
 			m_pRobot->updateControlParams(m0.params);
@@ -368,8 +367,8 @@ void CBodyBasics::calibrate()
 	case CS_Act1:
 	{
 		static INT64 nMoveUntilTick;
-		const Move m1 = { 8000, 3.0f, (float)M_PI, -0.8f, 0.0f };
-		const Move m2 = { 8000, 2.0f, (float)M_PI, -0.8f, 0.0f };
+		const Move m1 = { 8000, 3.0f, (float)M_PI, -0.8f, 0.5f };
+		const Move m2 = { 8000, 2.0f, (float)M_PI, -0.8f, 0.5f };
 		const MoveSequence Moves = {&m1, &m2};
 		const int nReps = 10;
 
@@ -416,6 +415,48 @@ void CBodyBasics::calibrate()
 	}
 	
 	case CS_Completed:
+	{
+		// Use Ceres Solver to find the parameters if enough data has been collected
+		int n = m_CalibCostFunctor.getNumDataPoints();
+		if (n < 1000) {
+			std::wstringstream wss;
+			wss << "Only " << n << " data points have been collected, which is too few. Calibration aborting.";
+			MessageBox(m_hWnd, wss.str().c_str(), NULL, MB_OK | MB_ICONERROR);
+		}
+		else
+		{
+			google::InitGoogleLogging("");
+			double initial_params[] = {
+				m_TFs.tfKRNominal.pos(0),
+				m_TFs.tfKRNominal.pos(1),
+				m_TFs.tfKRNominal.pos(2),
+				m_TFs.tfKRNominal.eul(0),
+				m_TFs.tfKRNominal.eul(1),
+				m_TFs.tfKRNominal.eul(2)
+			};
+
+			// Build the problem.
+			ceres::Problem problem;
+
+			// Set up the only cost function (also known as residual). This uses
+			// auto-differentiation to obtain the derivative (jacobian).
+			ceres::CostFunction* cost_function =
+				new ceres::AutoDiffCostFunction<CalibCostFunctor, 3, 6>(new CalibCostFunctor);
+			problem.AddResidualBlock(cost_function, NULL, initial_params);
+
+			// Run the solver!
+			ceres::Solver::Options options;
+			ceres::Solver::Summary summary;
+			Solve(options, &problem, &summary);
+
+			MessageBox(m_hWnd,
+				std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(summary.BriefReport()).c_str(),
+				NULL, MB_OK | MB_ICONINFORMATION);
+		}
+		
+
+	}
+
 	case CS_Aborted:
 	{
 		// Close file
@@ -916,8 +957,8 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 
 				// Transform the coordinates from the Kinect frame to the world frame
 				m_TFs.updateRW(m_pRobot, m_JointDataW.tsWindows); // update the tf with robot state
-				Eigen::Vector3f KFPoint(CSPoint.X, CSPoint.Y, CSPoint.Z); // Kinect frame point
-				Eigen::Vector3f WFPoint = m_TFs * KFPoint; // Convert it to a world frame point
+				Eigen::Vector3d KFPoint(CSPoint.X, CSPoint.Y, CSPoint.Z); // Kinect frame point
+				Eigen::Vector3d WFPoint = m_TFs * KFPoint; // Convert it to a world frame point
 				m_JointDataW.data[i + 0] = WFPoint(0);
 				m_JointDataW.data[i + 1] = WFPoint(1);
 				m_JointDataW.data[i + 2] = WFPoint(2);
@@ -932,6 +973,20 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			log();
 			
 			calibrate();
+
+			// Put in place the data needed for calibration
+			if (m_pRobot->getState()->isCalibrating) {				
+				m_CalibCostFunctor.vecT_rw.push_back(m_TFs.tfRW);
+
+				const CameraSpacePoint & CSPointLA = joints[JointType_AnkleLeft].Position;
+				Eigen::Vector3d pointLA(CSPointLA.X, CSPointLA.Y, CSPointLA.Z);
+				m_CalibCostFunctor.vecPointsLA.push_back(pointLA);
+
+				const CameraSpacePoint & CSPointRA = joints[JointType_AnkleLeft].Position;
+				Eigen::Vector3d pointRA(CSPointRA.X, CSPointRA.Y, CSPointRA.Z);
+				m_CalibCostFunctor.vecPointsRA.push_back(pointRA);
+			}
+				
 				
 		}
 
@@ -1407,8 +1462,8 @@ void CBodyBasics::DrawRobot(int drawType, float opacity)
 }
 
 // Not in use for now
-void CBodyBasics::KinectToWorld(const CameraSpacePoint & CSP, Eigen::Ref<Eigen::Vector3f> WFP)
+void CBodyBasics::KinectToWorld(const CameraSpacePoint & CSP, Eigen::Ref<Eigen::Vector3d> WFP)
 {
-	Eigen::Vector3f KFP(CSP.X, CSP.Y, CSP.Z);
+	Eigen::Vector3d KFP(CSP.X, CSP.Y, CSP.Z);
 	WFP = m_TFs.tfKR * m_TFs.tfRW * KFP;
 }

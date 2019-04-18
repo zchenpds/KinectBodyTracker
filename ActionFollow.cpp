@@ -26,8 +26,8 @@ ArActionDesired *ActionFollow::fire(ArActionDesired currentDesired)
 	pcRobotState pcState = m_pRobot->getState();
 	INT64 tsWindows = GetTickCount64();
 	
-	float v, w, th;
-	m_pRobot->calcControl(&v, &w, &th);
+	float v, w;
+	m_pRobot->calcControl(&v, &w);
 
 	if (pcState->isFollowing || pcState->isCalibrating)
 	{

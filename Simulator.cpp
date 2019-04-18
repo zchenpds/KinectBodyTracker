@@ -29,7 +29,7 @@ void Simulator::threadProc()
 
 		if (pcrs->isFollowing || pcrs->isCalibrating)
 		{
-			m_pRobot->calcControl(&v, &w, &th);
+			m_pRobot->calcControl(&v, &w);
 		}
 		else
 		{

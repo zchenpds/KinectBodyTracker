@@ -13,6 +13,11 @@
 #include "robot.h"
 #include "BaseLogger.h"
 #include <array>
+#include "ceres/ceres.h"
+#include <Eigen/StdVector>
+
+//#include "sophus/se3.hpp"
+#include <queue>
 
 const std::map <const JointType, const char * > jointTypeMap = {
 	{JointType_KneeLeft, "LKnee"},
@@ -62,51 +67,119 @@ struct JointData {
 	}
 };
 
+
+
+// Implementation of the Special Eucleadian Group
+struct SE3d {
+	Eigen::Vector3d pos; // translation vector
+	Eigen::Vector3d eul; // Euler angles, x, y, x
+	SE3d(std::array<double, 6> arr) :
+		pos({ arr[0], arr[1], arr[2] }),
+		eul({ arr[3], arr[4], arr[5] })
+	{}
+	SE3d operator+(const SE3d & rhs) {
+		SE3d ret({});
+		ret.pos = pos + rhs.pos;
+		ret.eul = pos + rhs.eul;
+		return ret;
+	}
+};
+
+// templated structure that calculates moving mean and variance
+template <typename T>
+struct MoveStats {
+	using Vector3T = Eigen::Matrix<T, 3, 1>;
+	MoveStats(int winSize = 200) :
+		m_nWinSize(winSize),
+		m_Sum(Vector3T::Zero()),
+		m_Mean(Vector3T::Zero()),
+		m_SumSq(Vector3T::Zero()) {}
+
+	void add(const Vector3T & newT) {
+		m_qData.push(newT);
+		m_Sum += newT;
+		m_SumSq += (newT.array() * newT.array()).matrix();
+		if (m_qData.size() > m_nWinSize) {
+			Vector3T oldT = m_qData.front();
+			m_Sum -= oldT;
+			m_SumSq -= (oldT.array() * oldT.array()).matrix();
+			m_qData.pop();
+		}
+		get_mean(m_Mean);
+	}
+
+	void get_mean(Vector3T & mean) {
+		if (m_qData.size() < 1) mean = Vector3T::Zero();
+		else mean = m_Sum / T(m_qData.size());
+	}
+
+	void get_movvar(Vector3T & movvar) {
+		if (m_qData.size() < 2) movvar = Vector3T::Zero();
+		else {
+			double n = m_qData.size();
+			movvar = (m_SumSq.array() / T(n) - m_Mean.array() * m_Mean.array()) * T(n / (n - 1));
+		}
+	}
+	const int m_nWinSize;
+	Vector3T m_Sum;
+	Vector3T m_Mean;
+	Vector3T m_SumSq;
+	std::queue<Vector3T> m_qData;
+};
+/*
+void testMoveStats() {
+	//debug
+	MoveStats < Eigen::Vector2d > MS(3);
+	Eigen::Vector2d res;
+	MS.add(Eigen::Vector2d(1, 1));
+	MS.get_movvar(res);
+	MS.add(Eigen::Vector2d(1, 2));
+	MS.get_movvar(res);
+	MS.add(Eigen::Vector2d(1, 3));
+	MS.get_movvar(res);
+	MS.add(Eigen::Vector2d(1, 4));
+	MS.get_movvar(res);
+	MS.add(Eigen::Vector2d(1, 5));
+	MS.get_movvar(res);
+	MS.add(Eigen::Vector2d(1, 6));
+	MS.get_movvar(res);
+	res;
+}
+*/
+
+// A combination of the transformation from Robot to World and 
+// the transformation from Kinect to robot.
 struct TFs {
-	Eigen::Affine3f tfRW, tfKR;
-	float tau;
+	Eigen::Affine3d tfRW, tfKR;
+	double tau; // in milliseconds
 	INT64 timeDiffWithRobot;
 
-	struct tfKRParams {
-		Eigen::Vector3f pos; // translation vector
-		Eigen::Vector3f eul; // Euler angles, x, y, x
-		tfKRParams(std::array<float, 6> arr) :
-			pos({ arr[0], arr[1], arr[2] }),
-			eul({ arr[3], arr[4], arr[5] })
-		{}
-		tfKRParams operator+(const tfKRParams & rhs) {
-			tfKRParams ret({});
-			ret.pos = pos + rhs.pos;
-			ret.eul = pos + rhs.eul;
-			return ret;
-		}
-	};
-	tfKRParams tfKRNominal, tfKRCorrection; //nominal value and additive correction for constructing tfKR
+	SE3d tfKRNominal, tfKRCorrection; //nominal value and additive correction for constructing tfKR
 
 	TFs(): 
-		tau(-1.05f),
+		tau(-50.0),
 		tfKRNominal({ -0.15f, 0.0f, 0.7f, M_PI / 2, -M_PI / 2, 0.0f }),
 		tfKRCorrection({})
 	{
 		setParams();
 		
-		tfKR = Eigen::Translation3f(-0.15f, 0.0f, 0.7f) 
-			* Eigen::AngleAxisf(M_PI / 2, Eigen::Vector3f::UnitX())
-			* Eigen::AngleAxisf(-M_PI / 2, Eigen::Vector3f::UnitY())
-			* Eigen::AngleAxisf(0.0f, Eigen::Vector3f::UnitX());
+		tfKR = Eigen::Translation3d(-0.15f, 0.0f, 0.7f) 
+			* Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX())
+			* Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitY())
+			* Eigen::AngleAxisd(0.0f, Eigen::Vector3d::UnitX());
 	}
 
-	void updateRW(Robot * pRobot, float tsWindows) {
+	void updateRW(Robot * pRobot, INT64 tsWindows) {
 		RobotState RSEstimated;
-		timeDiffWithRobot = pRobot->estimateState(&RSEstimated, tsWindows + tau);
+		timeDiffWithRobot = pRobot->estimateState(&RSEstimated, tsWindows + (INT64)tau);
 		updateRW(RSEstimated.x, RSEstimated.y, RSEstimated.th);
 	}
 
-	void updateRW(float x, float y, float th) {
-		tfRW = Eigen::Translation3f(x, y, 0.0f) * Eigen::AngleAxisf(th, Eigen::Vector3f::UnitZ());
+	void updateRW(double x, double y, double th) {
+		tfRW = Eigen::Translation3d(x, y, 0.0f) * Eigen::AngleAxisd(th, Eigen::Vector3d::UnitZ());
 	}
 
-	Eigen::Vector3f operator*(Eigen::Ref<Eigen::Vector3f> vec) {
+	Eigen::Vector3d operator*(Eigen::Ref<Eigen::Vector3d> vec) {
 		return tfRW * tfKR * vec;
 	}
 
@@ -118,14 +191,64 @@ struct TFs {
 	}
 
 	void updateTfKR() {
-		tfKRParams params = tfKRNominal + tfKRCorrection;
-		tfKR = Eigen::Translation3f(params.pos)
-			* Eigen::AngleAxisf(params.eul(0), Eigen::Vector3f::UnitX())
-			* Eigen::AngleAxisf(params.eul(1), Eigen::Vector3f::UnitY())
-			* Eigen::AngleAxisf(params.eul(2), Eigen::Vector3f::UnitX());
+		SE3d params = tfKRNominal + tfKRCorrection;
+		tfKR = Eigen::Translation3d(params.pos)
+			* Eigen::AngleAxisd(params.eul(0), Eigen::Vector3d::UnitX())
+			* Eigen::AngleAxisd(params.eul(1), Eigen::Vector3d::UnitY())
+			* Eigen::AngleAxisd(params.eul(2), Eigen::Vector3d::UnitX());
 
 	}
 };
+
+
+struct CalibCostFunctor {
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+	CalibCostFunctor(){}
+	
+	template <typename T>
+	bool operator()(T const * const sT_kr, T * sResiduals) const {
+		using Vector3T = Eigen::Matrix<T, 3, 1>;
+		//Eigen::Map<Sophus::SE3<T> const> const T_kr(sT_kr);
+		Eigen::Transform<T, 3, Eigen::Affine> T_kr = Eigen::Translation<T, 3>(sT_kr[0], sT_kr[1], sT_kr[2])
+			* Eigen::AngleAxis<T>(sT_kr[3], (Eigen::Matrix<T, 3, 1>() << T(1), T(0), T(0)).finished())
+			* Eigen::AngleAxis<T>(sT_kr[4], (Eigen::Matrix<T, 3, 1>() << T(0), T(1), T(0)).finished())
+			* Eigen::AngleAxis<T>(sT_kr[5], (Eigen::Matrix<T, 3, 1>() << T(1), T(0), T(0)).finished());
+
+		Eigen::Map<Vector3T> residuals(sResiduals);
+		residuals = Vector3T::Zero();
+		for (auto const & vecPoints : { vecPointsLA, vecPointsRA }) {
+			MoveStats<T> MS;
+			Vector3T sumVar = Vector3T::Zero();
+			assert(vecT_rw.size() == vecPoints.size());
+			for (int i = 0; i < vecT_rw.size(); i++) {
+				Vector3T P_w = vecT_rw[i].cast<T>() * T_kr * vecPoints[i].cast<T>();
+				Vector3T var;
+				MS.add(P_w);
+				MS.get_movvar(var);
+				sumVar += var;
+			}
+			residuals += sumVar;
+		}
+		return true;
+	}
+	
+	//std::vector<Sophus::SE3d> vecT_rw; // transform from robot frame to world frame
+	// transform from robot frame to world frame
+	std::vector < Eigen::Affine3d, Eigen::aligned_allocator<Eigen::Affine3d> > vecT_rw; 
+	// Left ankle joint points in Kinect frame
+	std::vector < Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > vecPointsLA; 
+	// Right ankle joint points in Kinect frame
+	std::vector < Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > vecPointsRA; 
+
+	int getNumDataPoints() {
+		int n1 = vecT_rw.size();
+		int n2 = vecPointsLA.size();
+		int n3 = vecPointsRA.size();
+		assert( n1 == n2 && n2 == n3 );
+		return vecT_rw.size();
+	}
+};
+
 
 void ErrorExit(LPTSTR lpszFunction)
 {
@@ -275,6 +398,7 @@ private:
 		CS_Aborted
 	} CalibState;
 	CalibState				m_pCalibState;
+	CalibCostFunctor		m_CalibCostFunctor;
 
 	void                    setParams();
 	void					log(bool bHeader = false) override;
@@ -361,7 +485,7 @@ private:
 	void DrawRobot(int drawType, float opacity = 1.0);
 
 	// Transform the coordinates from the Kinect frame to the World frame.
-	void KinectToWorld(const CameraSpacePoint & CSP, Eigen::Ref<Eigen::Vector3f> WFP);
+	void KinectToWorld(const CameraSpacePoint & CSP, Eigen::Ref<Eigen::Vector3d> WFP);
 
 };
 

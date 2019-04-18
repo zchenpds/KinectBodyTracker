@@ -57,6 +57,6 @@ RosSocket/enabled=false
 TFs/tfKR/pos=-0.17, 0.0, 0.72
 
 #simulator
-simulator/SpeedUpFactor=10
+simulator/SpeedUpFactor=1
 simulator/StepLength=100
 

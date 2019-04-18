@@ -305,7 +305,7 @@ void Robot::updateState() // To do: add mutex.
 	xOld = xNew;
 	yOld = yNew;
 	if (dXY > 0) {
-		dXY *= sgn(cos(atan2(yNew - yOld, xNew - xOld) - Pose.getThRad()));
+		dXY *= sgn(m_pArRobot->getVel());
 		m_State.x += dXY * cos(m_State.th);
 		m_State.y += dXY * sin(m_State.th);
 	}
@@ -470,6 +470,7 @@ void Robot::updateControlParams(float VmDistance, float VmHeading, float vScale,
 
 void Robot::updateControlParams(const float * params)
 {
+	m_Params.controlMode = 0;
 	updateControlParams(params[0], params[1], params[2], params[3]);
 }
 
@@ -482,9 +483,9 @@ bool Robot::isVisualCmdTooOld()
 		return false;
 }
 
-void Robot::calcControl(float * pV, float * pW, float * pTh)
+void Robot::calcControl(float * pV, float * pW)
 {
-	if (m_Params.controlMode == 0) {
+	if (m_Params.controlMode == 0 || m_State.isCalibrating) {
 		// Move to let the virtual marker approach the goal marker.
 #if 1
 		float xToGoal, yToGoal;
@@ -506,7 +507,6 @@ void Robot::calcControl(float * pV, float * pW, float * pTh)
 		}
 		if (pV != NULL) *pV = m_ControlCmd.v;
 		if (pW != NULL) *pW = m_ControlCmd.w;
-		if (pTh != NULL) *pTh = atan2(yToGoal, xToGoal);
 #else
 
 		float xToGoal, yToGoal;

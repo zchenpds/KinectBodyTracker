@@ -141,7 +141,7 @@ public:
 	bool isVisualCmdTooOld();
 
 	// This function is invoked by the fire function of ActionFollow in sychronization with the SIP loop.
-	void calcControl(float * pV = NULL, float * pW = NULL, float * pTh = NULL);
+	void calcControl(float * pV = NULL, float * pW = NULL);
 
 	// Initialize the virtual marker to where it would generate zero robot action/movement
 	void resetVisualCmd();
