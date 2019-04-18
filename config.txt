@@ -1,9 +1,9 @@
 ros_master=192.168.1.116:11411
 # This path must end with a backslash '\'
-dataPath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190415\data\
+dataPath=.\data\
 
 # This group of params can only updated before startup
-robotPort=COM3
+robotPort=COM5
 laser/enabled=false
 laser/port=COM3
 
