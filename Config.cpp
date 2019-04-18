@@ -135,7 +135,7 @@ bool Config::assign(const std::string & strKey, int & iValue)
 	}
 }
 
-bool Config::assign(const std::string & strKey, Eigen::Ref<Eigen::Vector3f> fVector)
+bool Config::assign(const std::string & strKey, Eigen::Ref<Eigen::Vector3d> fVector)
 {
 	ConfigParams::iterator it;
 	it = m_mapParams.find(strKey);
@@ -145,7 +145,7 @@ bool Config::assign(const std::string & strKey, Eigen::Ref<Eigen::Vector3f> fVec
 	{
 		std::stringstream ss(it->second);
 		int i = 0;
-		float fValueNew;
+		double fValueNew;
 		char sep;
 		while (ss.good() && i < 3) {
 			

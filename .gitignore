@@ -1,5 +1,7 @@
 Debug/*
 !Debug/AriaDebugVC15.dll
+!Debug/ceres.dll
+!Debug/libglog.dll
 *.fig
 *.zip
 
@@ -18,3 +20,4 @@ desiredPath*
 
 BodyTracker-Debug.sln
 test
+sophus/
