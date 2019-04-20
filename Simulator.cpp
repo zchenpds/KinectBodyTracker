@@ -2,27 +2,38 @@
 
 
 
-Simulator::Simulator(Robot* pRobot):
+Simulator::Simulator(Robot* pRobot, BodyTracker::CalibFunctor CalibCbFun):
 	m_pRobot(pRobot),
-	m_Thread(&Simulator::threadProc, this),
+	m_CalibCbFun(CalibCbFun),
 	m_iSpeedUpFactor(1),
 	m_iStepLength(100),
-	m_iStepCounter(0)
+	m_iStepCounter(0),
+	m_pThreadRobot(NULL),
+	m_pThreadKinect(NULL)
+	
 {
 	Config::Instance()->assign("simulator/SpeedUpFactor", m_iSpeedUpFactor);
 	Config::Instance()->assign("simulator/StepLength", m_iStepLength); // in milliseconds
+	Config::Instance()->assign("simulator/KinectDataFilePath", m_StrKinectDataFilePath);
+	m_KinectDataReader.openFile(m_StrKinectDataFilePath.c_str());
+	m_pThreadRobot = new std::thread(&Simulator::threadProcRobot, this);
+	m_pThreadKinect = new std::thread(&Simulator::threadProcKinect, this);
+	
 }
 
 
 Simulator::~Simulator()
 {
+	delete m_pThreadKinect;
+	delete m_pThreadRobot;
 }
 
-void Simulator::threadProc()
+void Simulator::threadProcRobot()
 {
 	while (1) {
 		pcRobotState pcrs = m_pRobot->getState();
 		INT64 tsWindows = GetTickCount64();
+		
 
 		float v, w, th;
 		
@@ -124,5 +135,17 @@ void Simulator::updateState(float v, float w)
 
 	if (m_pRobot->SIPcbFun && m_iStepCounter%m_iSpeedUpFactor ==0) {
 		m_pRobot->SIPcbFun();
+	}
+}
+
+// TO-DO: read kinect data files
+void Simulator::threadProcKinect()
+{
+	while (1) {
+		BodyTracker::Vector3d pointLA(-1, 0, 0);
+		BodyTracker::Vector3d pointRA(-1, 0.2, 0);
+		if (m_CalibCbFun)
+			m_CalibCbFun(pointLA, pointRA);
+		std::this_thread::sleep_for(std::chrono::milliseconds(m_iStepLength / 3 / m_iSpeedUpFactor));
 	}
 }

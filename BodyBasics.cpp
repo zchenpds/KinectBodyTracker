@@ -305,12 +305,12 @@ void CBodyBasics::log(bool bHeader)
 	logEOL();
 }
 
-void CBodyBasics::calibrate()
+void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA, BodyTracker::rcVector3d pointRA)
 {
-	typedef struct _Move {
+	struct Move {
 		int duration; // in milliseconds
-		float params[4];
-	} Move;
+		float params[5];
+	};
 	typedef const Move * pcMove;
 
 	typedef std::vector<pcMove> MoveSequence;
@@ -330,7 +330,7 @@ void CBodyBasics::calibrate()
 			
 			m_pRobot->setCalibRobotLogging(true);
 			// Let the robot stand still
-			const Move m0 = { 0, 2.5f, (float)M_PI, 0.0f, 0.0f };
+			const Move m0 = { 0, 0.3f, (float)M_PI, 0.0f, 0.0f };
 			m_pRobot->updateControlParams(m0.params);
 
 			// State transition
@@ -367,10 +367,10 @@ void CBodyBasics::calibrate()
 	case CS_Act1:
 	{
 		static INT64 nMoveUntilTick;
-		const Move m1 = { 8000, 3.0f, (float)M_PI, -0.8f, 0.5f };
-		const Move m2 = { 8000, 2.0f, (float)M_PI, -0.8f, 0.5f };
+		const Move m1 = { 8000, 0.3f, (float)M_PI, 0.8f, 0.03f, 2.5f };
+		const Move m2 = { 8000, 0.3f, (float)M_PI, 0.8f, 0.03f, 1.5f };
 		const MoveSequence Moves = {&m1, &m2};
-		const int nReps = 10;
+		const int nReps = 1;
 
 		// Move initialization
 		if (iMove == -1)
@@ -409,6 +409,12 @@ void CBodyBasics::calibrate()
 			nTimeoutTick += 3000;
 			m_pCalibState = CS_Completed;
 		}
+
+		// Put in place the data needed for calibration
+		m_CalibCostFunctor.vecT_rw.push_back(m_TFs.tfRW);
+		m_CalibCostFunctor.vecPointsLA.push_back(pointLA);
+		m_CalibCostFunctor.vecPointsRA.push_back(pointRA);
+
 		// Check if a request to stop calibration is received
 		if (m_pRobot->getState()->isCalibrating == false) m_pCalibState = CS_Aborted;
 		break;
@@ -630,7 +636,10 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 
 			//
 			m_pSyncSocket->init(hWnd);
-			m_pRobot->init(hWnd);
+			// In case the connection to the robot is not successful, let the simulator call calibrate().
+			using namespace std::placeholders;
+			BodyTracker::CalibFunctor CalibCbFun = std::bind(&CBodyBasics::calibrate, this, _1, _2);
+			m_pRobot->init(hWnd, CalibCbFun);
 
 			// Enable RosSocket
 			Config * pConfig = Config::Instance();
@@ -971,21 +980,14 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 
 			
 			log();
+			const CameraSpacePoint & CSPointLA = joints[JointType_AnkleLeft].Position;
+			const CameraSpacePoint & CSPointRA = joints[JointType_AnkleLeft].Position;
+			Eigen::Vector3d pointLA(CSPointLA.X, CSPointLA.Y, CSPointLA.Z);
+			Eigen::Vector3d pointRA(CSPointRA.X, CSPointRA.Y, CSPointRA.Z);
+
+			calibrate(pointLA, pointRA);
+
 			
-			calibrate();
-
-			// Put in place the data needed for calibration
-			if (m_pRobot->getState()->isCalibrating) {				
-				m_CalibCostFunctor.vecT_rw.push_back(m_TFs.tfRW);
-
-				const CameraSpacePoint & CSPointLA = joints[JointType_AnkleLeft].Position;
-				Eigen::Vector3d pointLA(CSPointLA.X, CSPointLA.Y, CSPointLA.Z);
-				m_CalibCostFunctor.vecPointsLA.push_back(pointLA);
-
-				const CameraSpacePoint & CSPointRA = joints[JointType_AnkleLeft].Position;
-				Eigen::Vector3d pointRA(CSPointRA.X, CSPointRA.Y, CSPointRA.Z);
-				m_CalibCostFunctor.vecPointsRA.push_back(pointRA);
-			}
 				
 				
 		}

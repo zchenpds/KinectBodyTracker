@@ -112,7 +112,7 @@ Robot::~Robot()
 	delete m_pSimulator;
 }
 
-bool Robot::init(HWND hWnd)
+bool Robot::init(HWND hWnd, BodyTracker::CalibFunctor CalibCbFun)
 {
 	m_hWnd = hWnd;
 	m_pActionFollow->init(hWnd);
@@ -130,7 +130,7 @@ bool Robot::init(HWND hWnd)
 		if (msgboxID == IDNO)
 			DestroyWindow(hWnd);
 		else
-			m_pSimulator = new Simulator(this);
+			m_pSimulator = new Simulator(this, CalibCbFun);
 		return false;
 	}
 	if (!m_pArRobot->isConnected())
@@ -460,18 +460,19 @@ void Robot::updateVisualCmd(float x, float z)
 	}
 }
 
-void Robot::updateControlParams(float VmDistance, float VmHeading, float vScale, float wScale)
+void Robot::updateControlParams(float VmDistance, float VmHeading, float vScale, float wScale, float desiredDistance)
 {
 	m_Params.VmDistance = VmDistance;
 	m_Params.VmHeading = VmHeading;
 	m_Params.vScale = vScale;
 	m_Params.wScale = wScale;
+	m_Params.desiredDistance = desiredDistance;
 }
 
 void Robot::updateControlParams(const float * params)
 {
 	m_Params.controlMode = 0;
-	updateControlParams(params[0], params[1], params[2], params[3]);
+	updateControlParams(params[0], params[1], params[2], params[3], params[4]);
 }
 
 bool Robot::isVisualCmdTooOld()

@@ -11,8 +11,8 @@ desiredDistance=2.1
 
 VmDistance=0.3
 VmHeading=0
-vScale=-0.8
-wScale=0.5
+vScale=0.8
+wScale=0.1
 
 vMax=0.8
 wMax=2.4
@@ -60,3 +60,4 @@ TFs/tfKR/pos=-0.17, 0.08, 0.92
 simulator/SpeedUpFactor=1
 simulator/StepLength=100
 
+simulator/KinectDataFilePath=

@@ -402,7 +402,8 @@ private:
 
 	void                    setParams();
 	void					log(bool bHeader = false) override;
-	void					calibrate();
+	// calibrate() may either be called either in processBody(...) or in the simulator thread.
+	void					calibrate(BodyTracker::rcVector3d pointLA, BodyTracker::rcVector3d pointRA);
 
 	inline void				onPressingButtonFollow();
 	inline void				onPressingButtonCalibrate();

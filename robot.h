@@ -111,7 +111,7 @@ public:
 public:
 	Robot();
 	~Robot();
-	bool init(HWND hWnd);
+	bool init(HWND hWnd, BodyTracker::CalibFunctor CalibCbFun);
 	void setParams();
 	int getControlMode();
 	void log(bool bHeader = false) override;
@@ -135,7 +135,7 @@ public:
 	/ - x: lateral displacement in Camera frame;
 	/ - z: longitudinal displacement in Camera frame. */
 	void updateVisualCmd(float x, float z);
-	void updateControlParams(float VmDistance, float VmHeading, float vScale, float wScale);
+	void updateControlParams(float VmDistance, float VmHeading, float vScale, float wScale, float desiredDistance);
 	void updateControlParams(const float * params);
 
 	bool isVisualCmdTooOld();

@@ -35,7 +35,7 @@
 #include <iostream>
 #include <locale> 
 #include <codecvt>
-
+#include "Eigen/core"
 
 #pragma comment (lib, "d2d1.lib")
 
@@ -68,4 +68,10 @@ T saturate(T VAL, T MIN, T MAX) {
 
 template <typename T> int sgn(T val) {
 	return (T(0) < val) - (val < T(0));
+}
+
+namespace BodyTracker {
+	typedef Eigen::Vector3d Vector3d;
+	typedef const Eigen::Ref<const Eigen::Vector3d>& rcVector3d;
+	typedef std::function<void(rcVector3d, rcVector3d)> CalibFunctor;
 }
