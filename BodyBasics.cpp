@@ -88,10 +88,12 @@ CBodyBasics::CBodyBasics() :
 	m_bLaserRenderingEnabled(true),
 	m_strRenderTarget2Frame("robot"),
 	m_pRosSocket(NULL),
+	m_pSyncSocket(NULL),
 	m_pRobot(NULL),
 	m_JointDataK("K"),
 	m_JointDataW("W"),
-	m_pSyncSocket(NULL)
+	m_TFs(std::bind(&Robot::estimateState, m_pRobot, std::placeholders::_1, std::placeholders::_2))
+	
 {
     LARGE_INTEGER qpf = {0};
     if (QueryPerformanceFrequency(&qpf))
@@ -305,7 +307,7 @@ void CBodyBasics::log(bool bHeader)
 	logEOL();
 }
 
-void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA, BodyTracker::rcVector3d pointRA)
+void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVector3d pointRA_k)
 {
 	struct Move {
 		int duration; // in milliseconds
@@ -328,9 +330,9 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA, BodyTracker::rcVect
 		{
 			// --- Start Calibration ---
 			
-			m_pRobot->setCalibRobotLogging(true);
+			//m_pRobot->setCalibRobotLogging(true);
 			// Let the robot stand still
-			const Move m0 = { 0, 0.3f, (float)M_PI, 0.0f, 0.0f };
+			const Move m0 = { 0, 0.3f, 0.0f, 0.0f, 0.0f };
 			m_pRobot->updateControlParams(m0.params);
 
 			// State transition
@@ -367,10 +369,10 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA, BodyTracker::rcVect
 	case CS_Act1:
 	{
 		static INT64 nMoveUntilTick;
-		const Move m1 = { 8000, 0.3f, (float)M_PI, 0.8f, 0.03f, 2.5f };
-		const Move m2 = { 8000, 0.3f, (float)M_PI, 0.8f, 0.03f, 1.5f };
+		const Move m1 = { 8000, 0.3f, 0.0f, 0.8f, 0.03f, 2.5f };
+		const Move m2 = { 8000, 0.3f, 0.0f, 0.8f, 0.03f, 1.5f };
 		const MoveSequence Moves = {&m1, &m2};
-		const int nReps = 1;
+		const int nReps = 10;
 
 		// Move initialization
 		if (iMove == -1)
@@ -412,8 +414,8 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA, BodyTracker::rcVect
 
 		// Put in place the data needed for calibration
 		m_CalibCostFunctor.vecT_rw.push_back(m_TFs.tfRW);
-		m_CalibCostFunctor.vecPointsLA.push_back(pointLA);
-		m_CalibCostFunctor.vecPointsRA.push_back(pointRA);
+		m_CalibCostFunctor.vecPointsLA.push_back(pointLA_k);
+		m_CalibCostFunctor.vecPointsRA.push_back(pointRA_k);
 
 		// Check if a request to stop calibration is received
 		if (m_pRobot->getState()->isCalibrating == false) m_pCalibState = CS_Aborted;
@@ -467,7 +469,7 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA, BodyTracker::rcVect
 	{
 		// Close file
 
-		m_pRobot->setCalibRobotLogging(false);
+		//m_pRobot->setCalibRobotLogging(false);
 
 		// Update status message
 		if (m_pCalibState == CS_Completed)
@@ -965,7 +967,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				m_JointDataK.data[i + 2] = CSPoint.Z;
 
 				// Transform the coordinates from the Kinect frame to the world frame
-				m_TFs.updateRW(m_pRobot, m_JointDataW.tsWindows); // update the tf with robot state
+				m_TFs.updateRW(m_JointDataW.tsWindows); // update the tf with robot state
 				Eigen::Vector3d KFPoint(CSPoint.X, CSPoint.Y, CSPoint.Z); // Kinect frame point
 				Eigen::Vector3d WFPoint = m_TFs * KFPoint; // Convert it to a world frame point
 				m_JointDataW.data[i + 0] = WFPoint(0);
@@ -982,10 +984,10 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			log();
 			const CameraSpacePoint & CSPointLA = joints[JointType_AnkleLeft].Position;
 			const CameraSpacePoint & CSPointRA = joints[JointType_AnkleLeft].Position;
-			Eigen::Vector3d pointLA(CSPointLA.X, CSPointLA.Y, CSPointLA.Z);
-			Eigen::Vector3d pointRA(CSPointRA.X, CSPointRA.Y, CSPointRA.Z);
+			Eigen::Vector3d pointLA_k(CSPointLA.X, CSPointLA.Y, CSPointLA.Z);
+			Eigen::Vector3d pointRA_k(CSPointRA.X, CSPointRA.Y, CSPointRA.Z);
 
-			calibrate(pointLA, pointRA);
+			calibrate(pointLA_k, pointRA_k);
 
 			
 				
@@ -1463,9 +1465,3 @@ void CBodyBasics::DrawRobot(int drawType, float opacity)
 	m_pRenderTarget2->FillRoundedRectangle(rrectBody, pBrushBody);
 }
 
-// Not in use for now
-void CBodyBasics::KinectToWorld(const CameraSpacePoint & CSP, Eigen::Ref<Eigen::Vector3d> WFP)
-{
-	Eigen::Vector3d KFP(CSP.X, CSP.Y, CSP.Z);
-	WFP = m_TFs.tfKR * m_TFs.tfRW * KFP;
-}

@@ -4,21 +4,24 @@
 
 Simulator::Simulator(Robot* pRobot, BodyTracker::CalibFunctor CalibCbFun):
 	m_pRobot(pRobot),
+	m_TFs(std::bind(&Robot::estimateState, m_pRobot, std::placeholders::_1, std::placeholders::_2)),
 	m_CalibCbFun(CalibCbFun),
 	m_iSpeedUpFactor(1),
-	m_iStepLength(100),
-	m_iStepCounter(0),
+	m_iStepLengthRobot(100),
+	m_iStepCounterRobot(0),
 	m_pThreadRobot(NULL),
-	m_pThreadKinect(NULL)
-	
+	m_pThreadKinect(NULL),
+	m_pThreadTimer(NULL),
+	m_tsWindows(GetTickCount64())
 {
 	Config::Instance()->assign("simulator/SpeedUpFactor", m_iSpeedUpFactor);
-	Config::Instance()->assign("simulator/StepLength", m_iStepLength); // in milliseconds
+	Config::Instance()->assign("simulator/StepLengthRobot", m_iStepLengthRobot); // in milliseconds
 	Config::Instance()->assign("simulator/KinectDataFilePath", m_StrKinectDataFilePath);
+	//m_TFs.setParams();
 	m_KinectDataReader.openFile(m_StrKinectDataFilePath.c_str());
 	m_pThreadRobot = new std::thread(&Simulator::threadProcRobot, this);
 	m_pThreadKinect = new std::thread(&Simulator::threadProcKinect, this);
-	
+	m_pThreadTimer = new std::thread(&Simulator::threadProcTimer, this);
 }
 
 
@@ -32,7 +35,6 @@ void Simulator::threadProcRobot()
 {
 	while (1) {
 		pcRobotState pcrs = m_pRobot->getState();
-		INT64 tsWindows = GetTickCount64();
 		
 
 		float v, w, th;
@@ -49,8 +51,8 @@ void Simulator::threadProcRobot()
 		}
 		updateState(v, w);
 
-		m_iStepCounter++;
-		std::this_thread::sleep_for(std::chrono::milliseconds(m_iStepLength / m_iSpeedUpFactor));
+		m_iStepCounterRobot++;
+		std::this_thread::sleep_for(std::chrono::milliseconds(m_iStepLengthRobot / m_iSpeedUpFactor));
 	}
 }
 
@@ -59,15 +61,8 @@ void Simulator::updateState(float v, float w)
 	const float aMax = 0.3, alphaMax = 1.5;
 	const float vMax = 0.75, wMax = 1.0;
 	RobotState & rs = m_pRobot->m_State;
-	float dt;
-	if (rs.tsWindows == -1) {
-		rs.tsWindows = GetTickCount64();
-		return;
-	}
-	else {
-		dt = m_iStepLength / 1000.0;
-		rs.tsWindows += m_iStepLength;
-	}
+	float dt = m_iStepLengthRobot / 1000.0;
+	rs.tsWindows = m_tsWindows;
 
 	// Update v and w
 	const float vOld = rs.v, wOld = rs.w;
@@ -133,7 +128,7 @@ void Simulator::updateState(float v, float w)
 
 	m_pRobot->log();
 
-	if (m_pRobot->SIPcbFun && m_iStepCounter%m_iSpeedUpFactor ==0) {
+	if (m_pRobot->SIPcbFun && m_iStepCounterRobot%m_iSpeedUpFactor ==0) {
 		m_pRobot->SIPcbFun();
 	}
 }
@@ -142,10 +137,22 @@ void Simulator::updateState(float v, float w)
 void Simulator::threadProcKinect()
 {
 	while (1) {
-		BodyTracker::Vector3d pointLA(-1, 0, 0);
-		BodyTracker::Vector3d pointRA(-1, 0.2, 0);
+		BodyTracker::Vector3d pointLA_w(-1, 0, 0);
+		BodyTracker::Vector3d pointRA_w(-1, 0.2, 0);
+		m_TFs.updateRW(m_pRobot->m_State.tsWindows);
+		BodyTracker::Vector3d pointLA_k = m_TFs / pointLA_w;
+		BodyTracker::Vector3d pointRA_k = m_TFs / pointRA_w;
+		m_pRobot->updateVisualCmd(0.0, pointLA_k(2));
 		if (m_CalibCbFun)
-			m_CalibCbFun(pointLA, pointRA);
-		std::this_thread::sleep_for(std::chrono::milliseconds(m_iStepLength / 3 / m_iSpeedUpFactor));
+			m_CalibCbFun(pointLA_k, pointRA_k);
+		std::this_thread::sleep_for(std::chrono::milliseconds(33 / m_iSpeedUpFactor));
+	}
+}
+
+void Simulator::threadProcTimer()
+{
+	while (1) {
+		m_tsWindows += m_iSpeedUpFactor;
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }

@@ -489,16 +489,15 @@ void Robot::calcControl(float * pV, float * pW)
 	if (m_Params.controlMode == 0 || m_State.isCalibrating) {
 		// Move to let the virtual marker approach the goal marker.
 #if 1
-		float xToGoal, yToGoal;
-		float distanceToGoal, headingOfGoal;
+		// float headingOfGoal;
 		const float tolerance = 0.1;
-		xToGoal = m_State.xVm - m_VisualCmd.xVmGoal;
-		yToGoal = m_State.yVm - m_VisualCmd.yVmGoal;
+		float xToGoal = m_State.xVm - m_VisualCmd.xVmGoal;
+		float yToGoal = m_State.yVm - m_VisualCmd.yVmGoal;
 
-		distanceToGoal = sqrt(pow(xToGoal, 2) + pow(yToGoal, 2));
+		float distanceToGoal = sqrt(pow(xToGoal, 2) + pow(yToGoal, 2));
 
 		if (distanceToGoal > tolerance) {
-			m_ControlCmd.v = m_Params.vScale * (xToGoal * cos(m_State.th) + yToGoal * sin(m_State.th));
+			m_ControlCmd.v = -m_Params.vScale * (xToGoal * cos(m_State.th) + yToGoal * sin(m_State.th));
 			m_ControlCmd.w = m_Params.wScale / m_Params.VmDistance *
 				(-xToGoal * sin(m_State.th) + yToGoal * cos(m_State.th));
 		}
@@ -683,7 +682,7 @@ bool Robot::predictState(RobotState * prs, float tSec)
 	return true;
 }
 
-INT64 Robot::estimateState(RobotState * prs, INT64 tsWindows)
+INT64 Robot::estimateState(BodyTracker::SE2dts * prs, INT64 tsWindows)
 {
 	prs->tsWindows = tsWindows;
 

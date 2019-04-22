@@ -15,7 +15,7 @@
 #include <array>
 #include "ceres/ceres.h"
 #include <Eigen/StdVector>
-
+#include "TFs.h"
 //#include "sophus/se3.hpp"
 #include <queue>
 
@@ -63,24 +63,6 @@ struct JointData {
 		ret[0] = data[i + 0];
 		ret[1] = data[i + 1];
 		ret[2] = data[i + 2];
-		return ret;
-	}
-};
-
-
-
-// Implementation of the Special Eucleadian Group
-struct SE3d {
-	Eigen::Vector3d pos; // translation vector
-	Eigen::Vector3d eul; // Euler angles, x, y, x
-	SE3d(std::array<double, 6> arr) :
-		pos({ arr[0], arr[1], arr[2] }),
-		eul({ arr[3], arr[4], arr[5] })
-	{}
-	SE3d operator+(const SE3d & rhs) {
-		SE3d ret({});
-		ret.pos = pos + rhs.pos;
-		ret.eul = pos + rhs.eul;
 		return ret;
 	}
 };
@@ -146,60 +128,6 @@ void testMoveStats() {
 	res;
 }
 */
-
-// A combination of the transformation from Robot to World and 
-// the transformation from Kinect to robot.
-struct TFs {
-	Eigen::Affine3d tfRW, tfKR;
-	double tau; // in milliseconds
-	INT64 timeDiffWithRobot;
-
-	SE3d tfKRNominal, tfKRCorrection; //nominal value and additive correction for constructing tfKR
-
-	TFs(): 
-		tau(-50.0),
-		tfKRNominal({ -0.15f, 0.0f, 0.7f, M_PI / 2, -M_PI / 2, 0.0f }),
-		tfKRCorrection({})
-	{
-		setParams();
-		
-		tfKR = Eigen::Translation3d(-0.15f, 0.0f, 0.7f) 
-			* Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX())
-			* Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitY())
-			* Eigen::AngleAxisd(0.0f, Eigen::Vector3d::UnitX());
-	}
-
-	void updateRW(Robot * pRobot, INT64 tsWindows) {
-		RobotState RSEstimated;
-		timeDiffWithRobot = pRobot->estimateState(&RSEstimated, tsWindows + (INT64)tau);
-		updateRW(RSEstimated.x, RSEstimated.y, RSEstimated.th);
-	}
-
-	void updateRW(double x, double y, double th) {
-		tfRW = Eigen::Translation3d(x, y, 0.0f) * Eigen::AngleAxisd(th, Eigen::Vector3d::UnitZ());
-	}
-
-	Eigen::Vector3d operator*(Eigen::Ref<Eigen::Vector3d> vec) {
-		return tfRW * tfKR * vec;
-	}
-
-	void setParams() {
-		Config* pConfig = Config::Instance();
-		pConfig->assign("TFs/tfKR/pos", tfKRNominal.pos);
-		pConfig->assign("TFs/tfKR/eul", tfKRNominal.eul);
-		updateTfKR();
-	}
-
-	void updateTfKR() {
-		SE3d params = tfKRNominal + tfKRCorrection;
-		tfKR = Eigen::Translation3d(params.pos)
-			* Eigen::AngleAxisd(params.eul(0), Eigen::Vector3d::UnitX())
-			* Eigen::AngleAxisd(params.eul(1), Eigen::Vector3d::UnitY())
-			* Eigen::AngleAxisd(params.eul(2), Eigen::Vector3d::UnitX());
-
-	}
-};
-
 
 struct CalibCostFunctor {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -375,7 +303,7 @@ private:
 	Robot*					m_pRobot;
 	JointData				m_JointDataK; // relative to a Kinect frame
 	JointData				m_JointDataW; // relative to a World frame
-	TFs						m_TFs;
+	BodyTracker::TFs		m_TFs;
 
 	// Interface
 	HWND					m_hWndButtonFollow;
@@ -403,7 +331,7 @@ private:
 	void                    setParams();
 	void					log(bool bHeader = false) override;
 	// calibrate() may either be called either in processBody(...) or in the simulator thread.
-	void					calibrate(BodyTracker::rcVector3d pointLA, BodyTracker::rcVector3d pointRA);
+	void					calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVector3d pointRA_k);
 
 	inline void				onPressingButtonFollow();
 	inline void				onPressingButtonCalibrate();
@@ -484,9 +412,5 @@ private:
 	// Draws a robot
 	void RenderRobotSurroundings();
 	void DrawRobot(int drawType, float opacity = 1.0);
-
-	// Transform the coordinates from the Kinect frame to the World frame.
-	void KinectToWorld(const CameraSpacePoint & CSP, Eigen::Ref<Eigen::Vector3d> WFP);
-
 };
 

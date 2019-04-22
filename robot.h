@@ -9,6 +9,7 @@
 #include <vector>
 #include "Laser.h"
 #include "Simulator.h"
+#include "TFs.h"
 
 class ActionFollow;
 
@@ -152,7 +153,7 @@ public:
 
 	std::function<void()> SIPcbFun;
 	bool predictState(RobotState * prs, float tSec);
-	INT64 estimateState(RobotState * prs, INT64 tsWindows);
+	INT64 estimateState(BodyTracker::SE2dts * prs, INT64 tsWindows);
 
 	// Get SONAR/laser pointer
 	ArSonarDevice * getSonar();

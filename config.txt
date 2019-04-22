@@ -54,10 +54,10 @@ renderTarget2/frame=world
 RosSocket/enabled=false
 
 # tfKR
-TFs/tfKR/pos=-0.17, 0.08, 0.92
+TFs/tfKR/pos=-0.08, 0.92, 0.17
 
 #simulator
 simulator/SpeedUpFactor=1
-simulator/StepLength=100
+simulator/StepLengthRobot=100
 
 simulator/KinectDataFilePath=

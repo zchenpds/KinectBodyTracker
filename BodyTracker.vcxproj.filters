@@ -84,6 +84,7 @@
     <ClInclude Include="Simulator.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="TFs.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BodyBasics.rc" />
