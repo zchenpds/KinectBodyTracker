@@ -92,8 +92,7 @@ CBodyBasics::CBodyBasics() :
 	m_pRobot(NULL),
 	m_JointDataK("K"),
 	m_JointDataW("W"),
-	m_TFs(std::bind(&Robot::estimateState, m_pRobot, std::placeholders::_1, std::placeholders::_2))
-	
+	m_TFs() // not fully initialized
 {
     LARGE_INTEGER qpf = {0};
     if (QueryPerformanceFrequency(&qpf))
@@ -109,7 +108,8 @@ CBodyBasics::CBodyBasics() :
 	m_pSyncSocket = new SyncSocket();
 	m_pRobot = new Robot();
 	m_pRobot->SIPcbFun = std::bind(&CBodyBasics::RenderRobotSurroundings, this);
-	
+	m_TFs.setFunctorEstimateRobotState(std::bind(&Robot::estimateState, m_pRobot, std::placeholders::_1, std::placeholders::_2));
+
 	setParams();
 	
 	m_pRobot->recordDesiredPath();

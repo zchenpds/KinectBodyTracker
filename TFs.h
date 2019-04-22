@@ -22,6 +22,7 @@ namespace BodyTracker {
 			ret.eul = eul + rhs.eul;
 			return ret;
 		}
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
 
 	// Implementation of the 2D Special Eucleadian Group
@@ -58,7 +59,7 @@ namespace BodyTracker {
 
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-		TFs(functorEstimateRobotState_t functorEstimateRobotState) :
+		TFs(functorEstimateRobotState_t functorEstimateRobotState = nullptr) :
 			tfRW(Eigen::Affine3f::Identity()),
 			tfKR(Eigen::Affine3f::Identity()),
 			tau(-50.0),
@@ -69,10 +70,14 @@ namespace BodyTracker {
 			setParams();
 		}
 
+		void setFunctorEstimateRobotState(functorEstimateRobotState_t functorEstimateRobotState) {
+			m_functorEstimateRobotState = functorEstimateRobotState;
+		}
+
 		void updateRW(INT64 tsWindows) {
-			assert(m_functorEstimateRobotState);
 			SE2dts poseEstimated({}, 0);
-			timeDiffWithRobot = m_functorEstimateRobotState(&poseEstimated, tsWindows + (INT64)tau);
+			if (m_functorEstimateRobotState)
+				timeDiffWithRobot = m_functorEstimateRobotState(&poseEstimated, tsWindows + (INT64)tau);
 			updateRW(poseEstimated.x, poseEstimated.y, poseEstimated.th);
 		}
 
