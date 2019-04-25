@@ -19,7 +19,7 @@ public:
 	void openDataFile(const char * name);
 protected:
 	// This function must be implemented in the derived class
-	// because what to be logged in unkown in this base class.
+	// because what to be logged is unkown in this base class.
 	// Use conditionalLog(...) and logEOF() to log each variable.
 	virtual void log(bool bHeader) = 0 ;
 

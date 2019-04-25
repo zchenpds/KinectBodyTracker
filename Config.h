@@ -28,7 +28,7 @@ public:
 	bool assign(const std::string & strKey, double & fValue);
 	bool assign(const std::string & strKey, bool & bValue);
 	bool assign(const std::string & strKey, int & iValue);
-	bool assign(const std::string & strKey, Eigen::Ref<Eigen::Vector3d> vecFloat);
+	bool assign(const std::string & strKey, Eigen::Vector3d & vecFloat);
 
 	static void resetCounter();
 	static int getUpdateCount();

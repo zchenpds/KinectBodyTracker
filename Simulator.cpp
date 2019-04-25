@@ -12,15 +12,15 @@ Simulator::Simulator(Robot* pRobot, BodyTracker::CalibFunctor CalibCbFun):
 	m_pThreadRobot(NULL),
 	m_pThreadKinect(NULL),
 	m_pThreadTimer(NULL),
-	m_tsWindows(GetTickCount64())
+	m_tsWindows(GetTickCount64()),
+	m_bEnableSimulatedKinect(false)
 {
 	Config::Instance()->assign("simulator/SpeedUpFactor", m_iSpeedUpFactor);
 	Config::Instance()->assign("simulator/StepLengthRobot", m_iStepLengthRobot); // in milliseconds
-	Config::Instance()->assign("simulator/KinectDataFilePath", m_StrKinectDataFilePath);
-	//m_TFs.setParams();
-	m_KinectDataReader.openFile(m_StrKinectDataFilePath.c_str());
+	Config::Instance()->assign("simulator/EnableKinect", m_bEnableSimulatedKinect);
 	m_pThreadRobot = new std::thread(&Simulator::threadProcRobot, this);
-	m_pThreadKinect = new std::thread(&Simulator::threadProcKinect, this);
+	if (m_bEnableSimulatedKinect)
+		m_pThreadKinect = new std::thread(&Simulator::threadProcKinect, this);
 	m_pThreadTimer = new std::thread(&Simulator::threadProcTimer, this);
 }
 

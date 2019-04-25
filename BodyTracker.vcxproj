@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="BaseLogger.cpp" />
     <ClCompile Include="BodyBasics.cpp" />
+    <ClCompile Include="CalibSolver.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ActionFollow.cpp" />
     <ClCompile Include="Laser.cpp" />
@@ -42,6 +43,7 @@
   <ItemGroup>
     <ClInclude Include="BaseLogger.h" />
     <ClInclude Include="BodyBasics.h" />
+    <ClInclude Include="CalibSolver.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ActionFollow.h" />
     <ClInclude Include="Laser.h" />
