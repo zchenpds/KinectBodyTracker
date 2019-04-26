@@ -633,7 +633,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			// In case the connection to the robot is not successful, let the simulator call calibrate().
 			using namespace std::placeholders;
 			BodyTracker::CalibFunctor CalibCbFun = std::bind(&CBodyBasics::calibrate, this, _1, _2);
-			m_pRobot->init(hWnd, CalibCbFun);
+			m_pRobot->init(hWnd, CalibCbFun, &m_JointDataW);
 
 			// Enable RosSocket
 			Config * pConfig = Config::Instance();

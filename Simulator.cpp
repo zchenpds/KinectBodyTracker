@@ -2,7 +2,7 @@
 
 
 
-Simulator::Simulator(Robot* pRobot, BodyTracker::CalibFunctor CalibCbFun):
+Simulator::Simulator(Robot* pRobot, BodyTracker::CalibFunctor CalibCbFun, JointData * pJD):
 	m_pRobot(pRobot),
 	m_TFs(std::bind(&Robot::estimateState, m_pRobot, std::placeholders::_1, std::placeholders::_2)),
 	m_CalibCbFun(CalibCbFun),
@@ -13,7 +13,8 @@ Simulator::Simulator(Robot* pRobot, BodyTracker::CalibFunctor CalibCbFun):
 	m_pThreadKinect(NULL),
 	m_pThreadTimer(NULL),
 	m_tsWindows(GetTickCount64()),
-	m_bEnableSimulatedKinect(false)
+	m_bEnableSimulatedKinect(false),
+	m_pJointDataW(pJD)
 {
 	Config::Instance()->assign("simulator/SpeedUpFactor", m_iSpeedUpFactor);
 	Config::Instance()->assign("simulator/StepLengthRobot", m_iStepLengthRobot); // in milliseconds
@@ -137,15 +138,35 @@ void Simulator::updateState(float v, float w)
 void Simulator::threadProcKinect()
 {
 	while (1) {
-		BodyTracker::Vector3d pointLA_w(-1, 0, 0);
-		BodyTracker::Vector3d pointRA_w(-1, 0.2, 0);
+		BodyTracker::Vector3d pointLA_w(-1.0, -0.2, 0.0);
+		BodyTracker::Vector3d pointRA_w(-1.0, 0.2, 0.0);
 		m_TFs.updateRW(m_pRobot->m_State.tsWindows);
 		BodyTracker::Vector3d pointLA_k = m_TFs / pointLA_w;
 		BodyTracker::Vector3d pointRA_k = m_TFs / pointRA_w;
-		m_pRobot->updateVisualCmd(0.0, pointLA_k(2));
+		m_pRobot->updateVisualCmd(0.1, pointLA_k(2));
 		if (m_CalibCbFun)
 			m_CalibCbFun(pointLA_k, pointRA_k);
+
+		if (m_pJointDataW) {
+			m_pJointDataW->tsWindows = GetTickCount64();
+			int i;
+			BodyTracker::Vector3d pointLA_w2 = m_TFs * pointLA_k;
+			i = m_pJointDataW->jointIndexMap[JointType_AnkleLeft];
+			m_pJointDataW->data[i + 0] = pointLA_w2(0);
+			m_pJointDataW->data[i + 1] = pointLA_w2(1);
+			m_pJointDataW->data[i + 2] = pointLA_w2(2);
+
+			BodyTracker::Vector3d pointRA_w2 = m_TFs * pointRA_k;
+			i = m_pJointDataW->jointIndexMap[JointType_AnkleRight];
+			m_pJointDataW->data[i + 0] = pointRA_w2(0);
+			m_pJointDataW->data[i + 1] = pointRA_w2(1);
+			m_pJointDataW->data[i + 2] = pointRA_w2(2);
+			
+		}
+
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(33 / m_iSpeedUpFactor));
+
 	}
 }
 

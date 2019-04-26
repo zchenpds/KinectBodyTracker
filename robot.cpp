@@ -112,7 +112,7 @@ Robot::~Robot()
 	delete m_pSimulator;
 }
 
-bool Robot::init(HWND hWnd, BodyTracker::CalibFunctor CalibCbFun)
+bool Robot::init(HWND hWnd, BodyTracker::CalibFunctor CalibCbFun, JointData * pJD)
 {
 	m_hWnd = hWnd;
 	m_pActionFollow->init(hWnd);
@@ -130,7 +130,7 @@ bool Robot::init(HWND hWnd, BodyTracker::CalibFunctor CalibCbFun)
 		if (msgboxID == IDNO)
 			DestroyWindow(hWnd);
 		else
-			m_pSimulator = new Simulator(this, CalibCbFun);
+			m_pSimulator = new Simulator(this, CalibCbFun, pJD);
 		return false;
 	}
 	if (!m_pArRobot->isConnected())

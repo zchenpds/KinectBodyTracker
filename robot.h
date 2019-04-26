@@ -112,7 +112,7 @@ public:
 public:
 	Robot();
 	~Robot();
-	bool init(HWND hWnd, BodyTracker::CalibFunctor CalibCbFun);
+	bool init(HWND hWnd, BodyTracker::CalibFunctor CalibCbFun, JointData * pJD = NULL);
 	void setParams();
 	int getControlMode();
 	void log(bool bHeader = false) override;

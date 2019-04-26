@@ -26,8 +26,9 @@ private:
 	INT64						m_tsWindows;
 	bool						m_bEnableSimulatedKinect;
 	CalibSolver					m_CalibSolver;
+	JointData*					m_pJointDataW;
 public:
-	Simulator(Robot* pRobot, BodyTracker::CalibFunctor CalibCbFun);
+	Simulator(Robot* pRobot, BodyTracker::CalibFunctor CalibCbFun, JointData * pJD = NULL);
 	~Simulator();
 	void threadProcRobot();
 	void updateState(float v, float w);
