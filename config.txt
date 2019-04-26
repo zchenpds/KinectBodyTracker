@@ -21,14 +21,14 @@ aLateralMax=0.25
 
 # Path following control parameters
 kSatPath=0.3
-kPath=1.0
+kPath=0.5
 
 # Distance keeping control paramters
 kSatRho=0.5
 kRho=1.0
 desiredPathSpeed=0.85
 
-odometry/thCorrectionFactor=0.983
+odometry/thCorrectionFactor=0.980
 
 # Control modes.
 # 0: Longitudal position control based on follower distance PLUS angular velocity control based on gesture
@@ -42,7 +42,7 @@ controlMode=1
 #PathEight/radius=0.7
 
 pathType=PathU
-PathU/straight_part_len=2.5
+PathU/straight_part_len=1.5
 PathU/radius=1.25
 
 # Rendering options
