@@ -323,7 +323,7 @@ struct NumericDiff {
     // norm_error is supposed to decrease as the finite difference tableau
     // generation progresses, serving both as an estimate for differentiation
     // error and as a measure of differentiation numerical stability.
-    double norm_error = std::numeric_limits<double>::max();
+    double norm_error = (std::numeric_limits<double>::max)();
 
     // Loop over decreasing step sizes until:
     //  1. Error is smaller than a given value (ridders_epsilon),

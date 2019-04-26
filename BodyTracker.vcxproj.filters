@@ -40,6 +40,9 @@
     <ClCompile Include="Simulator.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="CalibSolver.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rosserial_windows\ros_lib\WindowsSocket.h">
@@ -85,6 +88,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="TFs.h" />
+    <ClInclude Include="CalibSolver.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BodyBasics.rc" />

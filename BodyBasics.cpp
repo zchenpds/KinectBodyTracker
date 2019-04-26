@@ -84,6 +84,7 @@ CBodyBasics::CBodyBasics() :
 	m_pBrushRobotObstacle(NULL),
 	m_pBrushRobotTraversable(NULL),
 	m_pBrushJoint2(NULL),
+	m_bEnableSimulatedKinect(false),
 	m_bSonarRenderingEnabled(true),
 	m_bLaserRenderingEnabled(true),
 	m_strRenderTarget2Frame("robot"),
@@ -110,6 +111,7 @@ CBodyBasics::CBodyBasics() :
 	m_pRobot->SIPcbFun = std::bind(&CBodyBasics::RenderRobotSurroundings, this);
 	m_TFs.setFunctorEstimateRobotState(std::bind(&Robot::estimateState, m_pRobot, std::placeholders::_1, std::placeholders::_2));
 
+	Config::Instance()->assign("simulator/EnableKinect", m_bEnableSimulatedKinect);
 	setParams();
 	
 	m_pRobot->recordDesiredPath();
@@ -215,11 +217,14 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		{ &m_hWndButtonLoad, L"BUTTON", L"Load Config", 
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
 
+		{ &m_hWndButtonTestCalibSolver, L"BUTTON", L"Test CalibSolver",
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
+
 		{ &m_hWndButtonExit, L"BUTTON", L"Exit",
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
 
 		{ &m_hWndStatic, L"STATIC", L"", 
-		WS_VISIBLE | WS_CHILD, widthButton, heightButton*2 }
+		WS_VISIBLE | WS_CHILD, widthButton*3, heightButton*2 }
 	};
 
 	for (int i = 0, x = xButtonLeft, y = yButtonTop;
@@ -330,7 +335,7 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVe
 		{
 			// --- Start Calibration ---
 			
-			//m_pRobot->setCalibRobotLogging(true);
+			m_CalibSolver.init();
 			// Let the robot stand still
 			const Move m0 = { 0, 0.3f, 0.0f, 0.0f, 0.0f };
 			m_pRobot->updateControlParams(m0.params);
@@ -413,9 +418,8 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVe
 		}
 
 		// Put in place the data needed for calibration
-		m_CalibCostFunctor.vecT_rw.push_back(m_TFs.tfRW);
-		m_CalibCostFunctor.vecPointsLA.push_back(pointLA_k);
-		m_CalibCostFunctor.vecPointsRA.push_back(pointRA_k);
+		m_CalibSolver.push_back(m_TFs.tfRW, pointLA_k, pointRA_k);
+		
 
 		// Check if a request to stop calibration is received
 		if (m_pRobot->getState()->isCalibrating == false) m_pCalibState = CS_Aborted;
@@ -425,40 +429,25 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVe
 	case CS_Completed:
 	{
 		// Use Ceres Solver to find the parameters if enough data has been collected
-		int n = m_CalibCostFunctor.getNumDataPoints();
-		if (n < 1000) {
+		int n = m_CalibSolver.getNumDataPoints();
+		if (n < 50) {
 			std::wstringstream wss;
 			wss << "Only " << n << " data points have been collected, which is too few. Calibration aborting.";
 			MessageBox(m_hWnd, wss.str().c_str(), NULL, MB_OK | MB_ICONERROR);
 		}
 		else
 		{
-			google::InitGoogleLogging("");
 			double initial_params[] = {
 				m_TFs.tfKRNominal.pos(0),
 				m_TFs.tfKRNominal.pos(1),
 				m_TFs.tfKRNominal.pos(2),
 				m_TFs.tfKRNominal.eul(0),
 				m_TFs.tfKRNominal.eul(1),
-				m_TFs.tfKRNominal.eul(2)
-			};
-
-			// Build the problem.
-			ceres::Problem problem;
-
-			// Set up the only cost function (also known as residual). This uses
-			// auto-differentiation to obtain the derivative (jacobian).
-			ceres::CostFunction* cost_function =
-				new ceres::AutoDiffCostFunction<CalibCostFunctor, 3, 6>(new CalibCostFunctor);
-			problem.AddResidualBlock(cost_function, NULL, initial_params);
-
-			// Run the solver!
-			ceres::Solver::Options options;
-			ceres::Solver::Summary summary;
-			Solve(options, &problem, &summary);
+				m_TFs.tfKRNominal.eul(2)};
+			std::string strBriefReport = m_CalibSolver.solve(initial_params);
 
 			MessageBox(m_hWnd,
-				std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(summary.BriefReport()).c_str(),
+				std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(strBriefReport).c_str(),
 				NULL, MB_OK | MB_ICONINFORMATION);
 		}
 		
@@ -518,12 +507,14 @@ void CBodyBasics::updateButtons()
 	{
 		EnableWindow(m_hWndButtonFollow, false);
 		EnableWindow(m_hWndButtonLoad, false);
+		EnableWindow(m_hWndButtonTestCalibSolver, false);
 		SetWindowText(m_hWndButtonCalibrate, L" Stop Calibration");
 	}
 	else
 	{
 		EnableWindow(m_hWndButtonFollow, true);
 		EnableWindow(m_hWndButtonLoad, true);
+		EnableWindow(m_hWndButtonTestCalibSolver, true);
 		SetWindowText(m_hWndButtonCalibrate, L" Start Calibration");
 	}
 
@@ -568,7 +559,8 @@ void CBodyBasics::Update()
 
         if (SUCCEEDED(hr))
         {
-            ProcessBody(nTime, BODY_COUNT, ppBodies);
+			if (!m_bEnableSimulatedKinect)
+				ProcessBody(nTime, BODY_COUNT, ppBodies);
         }
 
         for (int i = 0; i < _countof(ppBodies); ++i)
@@ -641,7 +633,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			// In case the connection to the robot is not successful, let the simulator call calibrate().
 			using namespace std::placeholders;
 			BodyTracker::CalibFunctor CalibCbFun = std::bind(&CBodyBasics::calibrate, this, _1, _2);
-			m_pRobot->init(hWnd, CalibCbFun);
+			m_pRobot->init(hWnd, CalibCbFun, &m_JointDataW);
 
 			// Enable RosSocket
 			Config * pConfig = Config::Instance();
@@ -697,6 +689,38 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				{
 					// Open Config Button
 					system("notepad.exe config.txt");
+				}
+				else if (m_hWndButtonTestCalibSolver == hButton) {
+					
+					double initial_params[] = {
+						m_TFs.tfKRNominal.pos(0),
+						m_TFs.tfKRNominal.pos(1),
+						m_TFs.tfKRNominal.pos(2),
+						m_TFs.tfKRNominal.eul(0),
+						m_TFs.tfKRNominal.eul(1),
+						m_TFs.tfKRNominal.eul(2) };
+					std::string strBriefReport = m_CalibSolver.readFromFileAndSolve(initial_params);
+					CsvDataKinectRewriter CDKR(initial_params);
+					/*Eigen::Vector3d tt = { -0.08, 0.92, 0.17 };
+					Eigen::Vector3d dtt = { 0.1, 0.0, 0.0 };
+					Eigen::Vector3d rr = { 0.1, 0.0, 0.0 };
+					Eigen::Vector3d drr = { 0.1, 0.0, 0.0 };
+					Config::Instance()->assign("TestCalibSolver/tt", tt);
+					Config::Instance()->assign("TestCalibSolver/dtt", dtt);
+					Config::Instance()->assign("TestCalibSolver/rr", rr);
+					Config::Instance()->assign("TestCalibSolver/drr", drr);
+					for (int i = 0; i < 4; i++) {
+						Eigen::Vector3d tt2 = tt + dtt * (1<<i);
+						Eigen::Vector3d rr2 = rr + drr * (1<<i);
+						//double params2[] = { -0.08, 0.92, 0.17, 1.5845, -1.5642, 0.0 };
+						double params2[] = { tt2(0), tt2(1), tt2(2), rr2(0), rr2(1), rr2(2) };
+						CsvDataKinectRewriter CDKR2(params2); 
+					}*/
+					
+					
+					MessageBox(m_hWnd,
+						std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(strBriefReport).c_str(),
+						NULL, MB_OK | MB_ICONINFORMATION);
 				}
 				else if (m_hWndButtonLoad == hButton)
 				{
@@ -801,9 +825,6 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 	int iClosest = -1; // the index of the body closest to the camera
 	float dSqrMin = 25.0; // squared x-z-distance of the closest body
 	INT64 t0Windows = GetTickCount64();
-
-	if (m_pRobot && m_pRobot->isConnected() == false)
-		RenderRobotSurroundings(); //debug
 
     if (m_hWnd)
     {
@@ -956,6 +977,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 			// Populate the containers with data to be recorded
 			m_JointDataW.tsWindows = m_JointDataK.tsWindows = GetTickCount64();
 			m_JointDataW.tsKinect = m_JointDataK.tsKinect = (nTime - m_nStartTime) / 10000;
+			m_TFs.updateRW(m_JointDataW.tsWindows); // update the tf with robot state
 
 			int i = 0;
 			for (auto const &jt : jointTypeMap)
@@ -967,7 +989,6 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 				m_JointDataK.data[i + 2] = CSPoint.Z;
 
 				// Transform the coordinates from the Kinect frame to the world frame
-				m_TFs.updateRW(m_JointDataW.tsWindows); // update the tf with robot state
 				Eigen::Vector3d KFPoint(CSPoint.X, CSPoint.Y, CSPoint.Z); // Kinect frame point
 				Eigen::Vector3d WFPoint = m_TFs * KFPoint; // Convert it to a world frame point
 				m_JointDataW.data[i + 0] = WFPoint(0);

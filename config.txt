@@ -55,9 +55,22 @@ RosSocket/enabled=false
 
 # tfKR
 TFs/tfKR/pos=-0.08, 0.92, 0.17
+TFs/tfKR/eul=1.5707, -1.5707, 0.0
 
 #simulator
 simulator/SpeedUpFactor=1
 simulator/StepLengthRobot=100
+simulator/EnableKinect=true
 
-simulator/KinectDataFilePath=
+# CalibSolver
+CalibSolver/KinectCsvFilePath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190415\data20190418calibration\data_20190418_20_10_46_Kinect0.csv
+CalibSolver/RobotCsvFilePath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190415\data20190418calibration\data_20190418_20_10_46_Robot0.csv
+CalibSolver/MovVarWinSize=30
+CalibSolver/DownsampleFactor=30
+CalibSolver/DownsampleChoice=1
+
+# Test CalibSolver
+TestCalibSolver/tt=0.17, 0.92, -0.17
+TestCalibSolver/dtt=0.0, 0.0, 0.0
+TestCalibSolver/rr=1.5707, -1.5707, 0.0
+TestCalibSolver/drr=0.0, 0.03, 0.0

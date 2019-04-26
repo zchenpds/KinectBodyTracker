@@ -1,21 +1,69 @@
 %%
 close all;
 clear;
-run('importData.m')
-if importDataFailedAt == 1 || importDataFailedAt == 2
-    return;
+[filename2, pathname2] = uigetfile('data*Robot?.csv');
+if isequal(filename2,0)
+   disp('Cannot open data file. User selected Cancel');
+   return
+else
+    dataRobot = importRobotData([pathname2,filename2]);
 end
+
+
+[filename3, pathname3] = uigetfile([pathname2,filename2(1:22),'*desiredPath.m']);
+if isequal(filename3,0)
+   disp('Cannot open desiredPath file. User selected Cancel');
+else
+    run([pathname3,filename3]);
+end
+
+
+[filename4, pathname4] = uigetfile([pathname2,filename2(1:22),'*Vicon.csv']);
+if isequal(filename4,0)
+   disp('Cannot open Vicon file. User selected Cancel');
+else
+    dataVicon = importViconData([pathname4,filename4]);
+end
+
 %% Draw trajectory as recorded by odometry
 close all;
 figure;
-plot(dataRobot.xVm, dataRobot.yVm)
-hold on
-plot(desired_path(:,1), desired_path(:, 2), 'o');
+
+if exist('desired_path', 'var')
+    plot(dataRobot.xVm, dataRobot.yVm)
+    hold on
+    plot(desired_path(:,1), desired_path(:, 2), 'o');
+    legend({'Actual path', 'Desired path'});
+else
+    plot(dataRobot.x, dataRobot.y)
+end
 axis equal
 xlabel('x(m)')
 ylabel('y(m)')
-legend({'Actual path', 'Desired path'});
 title('Trajectory as recorded by odometry');
+%% Plot x, y, and th vs time
+figure;
+ax1 = subplot(3, 1, 1);
+t = (dataRobot.tRW - dataRobot.tRW(1))/1e3;
+plot(t, dataRobot.x)
+xlabel('t(s)')
+ylabel('x(m)')
+title('x position');
+
+ax2 = subplot(3, 1, 2);
+plot(t, dataRobot.y)
+xlabel('t(s)')
+ylabel('y(m)')
+title('y position');
+
+ax3 = subplot(3, 1, 3);
+plot(t, dataRobot.th)
+xlabel('t(s)')
+ylabel('th(rad)')
+title('orientation');
+
+linkaxes([ax1, ax2, ax3], 'x');
+
 %% Plot speed vs time
 figure;
 ax1 = subplot(2, 1, 1);
@@ -39,7 +87,7 @@ title('Angular speed');
 
 linkaxes([ax1, ax2], 'x');
 %% Vicon
-if importDataFailedAt == 3
+if ~exist('dataVicon', 'var')
     return;
 end
 

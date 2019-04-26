@@ -1,12 +1,18 @@
 #pragma once
 #include <stdafx.h>
 #include <array>
+#include "Config.h"
 
 namespace BodyTracker {
 	typedef Eigen::Vector3d Vector3d;
-	typedef const Eigen::Ref<const Eigen::Vector3d>& rcVector3d;
+	//typedef const Eigen::Ref<const Eigen::Vector3d>& rcVector3d;
+	typedef Eigen::Vector3d & rVector3d;
+	typedef const Eigen::Vector3d & rcVector3d;
 	typedef std::function<void(rcVector3d, rcVector3d)> CalibFunctor;
 
+	typedef Eigen::Affine3d Affine3d;
+	typedef Eigen::Affine3d & rAffine3d;
+	typedef const Eigen::Affine3d & rcAffine3d;
 
 	// Implementation of the 3D Special Eucleadian Group
 	struct SE3d {
@@ -85,6 +91,10 @@ namespace BodyTracker {
 			tfRW = Eigen::Translation3d(x, y, 0.0f) * Eigen::AngleAxisd(th, Eigen::Vector3d::UnitZ());
 		}
 
+		void updateRW(const Eigen::Affine3d & tfRW) {
+			this->tfRW = tfRW;
+		}
+
 		BodyTracker::Vector3d operator*(BodyTracker::rcVector3d vec) {
 			return tfRW * tfKR * vec;
 		}
@@ -129,3 +139,53 @@ namespace BodyTracker {
 	}; // struct TFs
 
 } // namespace BodyTracker
+
+
+
+const std::map <const JointType, const char * > jointTypeMap = {
+	{JointType_KneeLeft, "LKnee"},
+	{JointType_AnkleLeft, "LAnkle"},
+	{JointType_FootLeft, "LFoot"},
+	{JointType_KneeRight, "RKnee"},
+	{JointType_AnkleRight, "RAnkle"},
+	{JointType_FootRight, "RFoot"}
+};
+
+const int JOINT_DATA_SIZE = jointTypeMap.size() * 3;
+
+struct JointData {
+	std::vector<float>			data;
+	std::vector<std::string>	names;
+	INT64						tsKinect;	// (nTime - m_nStartTime) / 10000
+	INT64						tsWindows;	// GetTickCount64()
+	INT64						tsWindowsBase;
+	std::map < JointType, int > jointIndexMap;
+
+	// constructor
+	JointData(const char * prefix = "") :
+		tsKinect(0),
+		tsWindows(0),
+		tsWindowsBase(GetTickCount64())
+	{
+		data.reserve(JOINT_DATA_SIZE);
+		for (int i = 0; i < JOINT_DATA_SIZE; i++)
+			data.push_back(0.0f);
+		names.reserve(JOINT_DATA_SIZE);
+		for (auto &jt : jointTypeMap)
+		{
+			jointIndexMap[jt.first] = names.size();
+			names.push_back(prefix + std::string(jt.second) + "X");
+			names.push_back(prefix + std::string(jt.second) + "Y");
+			names.push_back(prefix + std::string(jt.second) + "Z");
+		}
+	}
+
+	std::array<float, 3> operator[](const JointType type) {
+		std::array<float, 3> ret;
+		int i = jointIndexMap[type];
+		ret[0] = data[i + 0];
+		ret[1] = data[i + 1];
+		ret[2] = data[i + 2];
+		return ret;
+	}
+};

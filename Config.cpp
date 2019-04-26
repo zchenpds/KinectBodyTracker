@@ -9,6 +9,12 @@
 Config* Config::m_pInstance = nullptr;
 int Config::m_countUpdates = 0;
 
+inline static void trim(std::string & str) {
+	const std::string chars = "\t\n\v\f\r ";
+	str.erase(0, str.find_first_not_of(chars));
+	str.erase(str.find_last_not_of(chars) + 1);
+}
+
 /** This function is called to create an instance of the class.
     Calling the constructor publicly is not allowed. The constructor
     is private and is only called by this Instance function.
@@ -38,8 +44,12 @@ void Config::load(const std::string & fileName)
 		std::string strKey, strValue;
 		std::stringstream ss(strLine);
 		if (std::getline(ss, strKey, '='))
-			if (std::getline(ss, strValue))
+			if (std::getline(ss, strValue)) {
+				trim(strKey);
+				trim(strValue);
 				m_mapParams[strKey] = strValue;
+			}
+				
 	}
 	ifsConfig.close();
 }
@@ -135,7 +145,7 @@ bool Config::assign(const std::string & strKey, int & iValue)
 	}
 }
 
-bool Config::assign(const std::string & strKey, Eigen::Ref<Eigen::Vector3d> fVector)
+bool Config::assign(const std::string & strKey, Eigen::Vector3d & fVector)
 {
 	ConfigParams::iterator it;
 	it = m_mapParams.find(strKey);
