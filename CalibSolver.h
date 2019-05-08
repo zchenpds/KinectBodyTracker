@@ -72,8 +72,12 @@ void testMoveStats() {
 
 struct CalibCostFunctor {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-		CalibCostFunctor() {
+	CalibCostFunctor() {
 		Config::Instance()->assign("CalibSolver/MovVarWinSize", iMovVarWinSize);
+		const int sizeReserved = 6000;
+		vecT_rw.reserve(sizeReserved);
+		vecPointsLA.reserve(sizeReserved);
+		vecPointsRA.reserve(sizeReserved);
 	}
 
 	template <typename T>

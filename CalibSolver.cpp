@@ -181,7 +181,6 @@ std::string CalibSolver::solve(double * initial_params)
 	assert(m_pCalibCostFunctor);
 	google::InitGoogleLogging("log_test");
 	google::SetLogDestination(google::GLOG_INFO, ".\\");
-	LOG(INFO) << "Found " << 2332 << " cookies";
 
 	// Build the problem.
 	ceres::Problem * pProblem = new ceres::Problem;
@@ -197,7 +196,7 @@ std::string CalibSolver::solve(double * initial_params)
 	//pProblem->SetParameterUpperBound(initial_params, 4, M_PI / 2 + 0.1);
 
 	// Hold constant some parameters because otherwise the problem would be overparameterized and ill-conditioned
-	pProblem->SetParameterization(initial_params, new ceres::SubsetParameterization(6, { 3, 4, 5 }));
+	pProblem->SetParameterization(initial_params, new ceres::SubsetParameterization(6, { 0, 1, 2, 5 }));
 
 	// Run the solver!
 	ceres::Solver::Options options;

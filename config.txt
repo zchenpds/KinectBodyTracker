@@ -60,11 +60,11 @@ TFs/tfKR/eul=1.5707, -1.5707, 0.0
 #simulator
 simulator/SpeedUpFactor=1
 simulator/StepLengthRobot=100
-simulator/EnableKinect=true
+simulator/EnableKinect=false
 
 # CalibSolver
-CalibSolver/KinectCsvFilePath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190415\data20190418calibration\data_20190418_20_10_46_Kinect0.csv
-CalibSolver/RobotCsvFilePath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190415\data20190418calibration\data_20190418_20_10_46_Robot0.csv
+CalibSolver/KinectCsvFilePath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190415\data20190426calib\data_20190426_18_42_40_Kinect0.csv
+CalibSolver/RobotCsvFilePath=C:\Users\zchen\Projects\BodyBasics1\matlab\20190415\data20190426calib\data_20190426_18_42_40_Robot0.csv
 CalibSolver/MovVarWinSize=30
 CalibSolver/DownsampleFactor=30
 CalibSolver/DownsampleChoice=1
