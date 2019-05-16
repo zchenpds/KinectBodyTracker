@@ -201,7 +201,10 @@ void Robot::setParams()
 	pConfig->assign("kSatRho", m_Params.kSatRho);
 	pConfig->assign("kRho", m_Params.kRho);
 	pConfig->assign("desiredPathSpeed", m_Params.desiredPathSpeed);
-	pConfig->assign("odometry/thCorrectionFactor", m_Params.thCorrectionFactor);
+
+	std::string strRobotSel;
+	pConfig->assign("RobotSel", strRobotSel);
+	pConfig->assign("odometry/thCorrectionFactor" + strRobotSel, m_Params.thCorrectionFactor);
 
 	std::string StrRobotPort;
 	pConfig->assign("robotPort", StrRobotPort);

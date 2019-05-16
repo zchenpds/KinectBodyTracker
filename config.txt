@@ -2,6 +2,8 @@ ros_master=192.168.1.116:11411
 # This path must end with a backslash '\'
 dataPath=.\data\
 
+RobotSel=/P3DX # P3AT, P3DX
+
 # This group of params can only updated before startup
 robotPort=COM4
 laser/enabled=false
@@ -28,7 +30,8 @@ kSatRho=0.5
 kRho=1.0
 desiredPathSpeed=0.85
 
-odometry/thCorrectionFactor=0.980
+odometry/thCorrectionFactor/P3AT=0.280
+odometry/thCorrectionFactor/P3DX=4.012
 
 # Control modes.
 # 0: Longitudal position control based on follower distance PLUS angular velocity control based on gesture
@@ -43,7 +46,7 @@ controlMode=1
 
 # ************ PATH SELECTION ************
 pathType=PathU
-PathU/paramGroupSel=/3
+PathU/paramGroupSel=/1
 
 # CW
 PathU/straight_part_len/1=1.5
@@ -69,8 +72,12 @@ renderTarget2/frame=world
 RosSocket/enabled=false
 
 # tfKR
-TFs/tfKR/pos=-0.08, 0.92, 0.17
-TFs/tfKR/eul=1.5707, -1.5707, 0.0
+TFs/tfKR/pos/P3AT=-0.08, 0.92, 0.17
+TFs/tfKR/eul/P3AT=1.5707, -1.5707, 0.0
+
+# tfKR
+TFs/tfKR/pos/P3DX=-0.04, 0.7, -0.17
+TFs/tfKR/eul/P3DX=1.5707, -1.5707, 0.0
 
 #simulator
 simulator/SpeedUpFactor=1

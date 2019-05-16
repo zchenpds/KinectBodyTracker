@@ -121,8 +121,10 @@ namespace BodyTracker {
 
 		void setParams() {
 			Config* pConfig = Config::Instance();
-			pConfig->assign("TFs/tfKR/pos", tfKRNominal.pos);
-			pConfig->assign("TFs/tfKR/eul", tfKRNominal.eul);
+			std::string strRobotSel;
+			pConfig->assign("RobotSel", strRobotSel);
+			pConfig->assign("TFs/tfKR/pos" + strRobotSel, tfKRNominal.pos);
+			pConfig->assign("TFs/tfKR/eul" + strRobotSel, tfKRNominal.eul);
 			updateTfKR();
 		}
 
