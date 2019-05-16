@@ -52,6 +52,7 @@ namespace BodyTracker {
 	private:
 		float straight_part_len;
 		float radius;
+		float numReps;
 
 		float curved_part_len;
 

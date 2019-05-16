@@ -180,11 +180,20 @@ namespace BodyTracker {
 		th0 = asin(m_PathPose.orientation.z) * 2;
 		const Eigen::Transform<float, 2, Eigen::Affine> transform = Eigen::Rotation2Df(th0) * Eigen::Translation2f(x0, y0);
 
+		float dist0 = numReps * getCircumference();
+		float maxV0 = 0;
+		if (dist >= dist0) {
+			dist = dist0;
+			maxV0 = 0;
+		}
+		else
+			maxV0 = sqrt(2 * aLongitudinalMax * 0.9 * (dist0 - dist));
+
 		dist -= floor(dist / getCircumference()) * getCircumference();
 
 		// Speed constraint
 		float maxV = 0;
-		float vcc = sqrt(aLateralMax * radius);
+		float vcc = sqrt(aLateralMax * fabs(radius));
 
 		// Segment endpoints definition
 		double distEndpoints[] = {
@@ -245,7 +254,7 @@ namespace BodyTracker {
 		m_PoseDesired.orientation.w = quatDesired.w;
 
 		if (pMaxV) {
-			*pMaxV = maxV;
+			*pMaxV = fmin(maxV, maxV0);
 		}
 
 		return &m_PoseDesired;
@@ -254,16 +263,22 @@ namespace BodyTracker {
 	void PathU::setParams()
 	{
 		Config* pConfig = Config::Instance();
+
+		std::string strSuffix;
+		pConfig->assign("PathU/paramGroupSel", strSuffix);
+
 		straight_part_len = 1.5;
-		pConfig->assign("PathU/straight_part_len", straight_part_len);
+		pConfig->assign("PathU/straight_part_len" + strSuffix, straight_part_len);
 		radius = 1.5;
-		pConfig->assign("PathU/radius", radius);
+		pConfig->assign("PathU/radius" + strSuffix, radius);
+		numReps = 0.98;
+		pConfig->assign("pathU/numReps" + strSuffix, numReps);
 
 		aLongitudinalMax = 0.3;
 		aLateralMax = 0.2;
 		pConfig->assign("aLateralMax", aLateralMax);
 
-		curved_part_len = radius * M_PI;
+		curved_part_len = fabs(radius) * M_PI;
 		circumference = straight_part_len * 2 + curved_part_len * 2;
 	}
 
