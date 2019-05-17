@@ -19,7 +19,7 @@ wScale=0.1
 vMax=0.8
 wMax=2.4
 kappaMax=10
-aLateralMax=0.25
+aLateralMax=0.35
 
 # Path following control parameters
 kSatPath=0.3
@@ -30,8 +30,8 @@ kSatRho=0.5
 kRho=1.0
 desiredPathSpeed=0.85
 
-odometry/thCorrectionFactor/P3AT=0.280
-odometry/thCorrectionFactor/P3DX=4.012
+odometry/thCorrectionFactor/P3AT=0.980
+odometry/thCorrectionFactor/P3DX=1.003
 
 manualAttenuationFactor=0.96
 
@@ -78,7 +78,7 @@ TFs/tfKR/pos/P3AT=-0.08, 0.92, 0.17
 TFs/tfKR/eul/P3AT=1.5707, -1.5707, 0.0
 
 # tfKR
-TFs/tfKR/pos/P3DX=-0.04, 0.7, -0.17
+TFs/tfKR/pos/P3DX=-0.04, 0.74, -0.17
 TFs/tfKR/eul/P3DX=1.5707, -1.5707, 0.0
 
 #simulator
