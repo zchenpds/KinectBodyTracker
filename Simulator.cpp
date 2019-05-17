@@ -41,7 +41,7 @@ void Simulator::threadProcRobot()
 		float v, w, th;
 		
 
-		if (pcrs->isFollowing || pcrs->isCalibrating)
+		if (pcrs->mode == OM_Following || pcrs->mode == OM_Calibrating || pcrs->mode == OM_Manual)
 		{
 			m_pRobot->calcControl(&v, &w);
 		}

@@ -13,6 +13,13 @@
 
 class ActionFollow;
 
+enum OperationMode {
+	OM_Idle = 0,
+	OM_Following = 1,
+	OM_Calibrating = 2,
+	OM_Manual = 3
+};
+
 typedef struct RobotState_ {
 	float			x; // meter
 	float			y; // meter
@@ -29,8 +36,8 @@ typedef struct RobotState_ {
 	INT64			tsWindows; // return of GetTickCount64()
 	INT64			tsRobot; // return of ArRobot::getLastOdometryTime() in milliseconds
 
-	bool			isFollowing;
-	bool			isCalibrating;
+	OperationMode	mode;
+
 	// debug
 	float			thDesired;
 	float			xError;
@@ -77,6 +84,8 @@ typedef struct ControlParams_ {
 	float			desiredPathSpeed;	
 	
 	float			thCorrectionFactor; // odometry/thCorrectionFactor=0.98
+	
+	float			manualAttenuationFactor;
 } ControlParams, *pControlParams;
 
 typedef struct ControlCmd_ {
@@ -130,6 +139,7 @@ public:
 
 	bool toggleFollowing();
 	bool toggleCalibration();
+	bool toggleManual();
 
 	// Kinect data processing thread invokes these functions
 	/* 1. Pass the position of the subject's spine base: 
@@ -147,8 +157,6 @@ public:
 	// Initialize the virtual marker to where it would generate zero robot action/movement
 	void resetVisualCmd();
 
-	void setCalibRobotLogging(bool bCalib);
-
 	void recordDesiredPath();
 
 	std::function<void()> SIPcbFun;
@@ -158,6 +166,9 @@ public:
 	// Get SONAR/laser pointer
 	ArSonarDevice * getSonar();
 	Laser * getLaser();
+
+	void setControlMode(int mode);
+	void restoreControlMode();
 	
 };
 

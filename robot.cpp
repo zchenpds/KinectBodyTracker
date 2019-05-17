@@ -17,8 +17,7 @@ Robot::Robot() :
 	m_pSimulator(NULL)
 {
 	ZeroMemory(&m_State, sizeof(m_State));
-	m_State.isFollowing = false;
-	m_State.isCalibrating = false;
+	m_State.mode = OM_Idle;
 	m_State.tsWindows = -1;
 	m_Params.controlMode = 0;
 
@@ -206,6 +205,9 @@ void Robot::setParams()
 	pConfig->assign("RobotSel", strRobotSel);
 	pConfig->assign("odometry/thCorrectionFactor" + strRobotSel, m_Params.thCorrectionFactor);
 
+	m_Params.manualAttenuationFactor = 0.95;
+	pConfig->assign("manualAttenuationFactor", m_Params.manualAttenuationFactor);
+
 	std::string StrRobotPort;
 	pConfig->assign("robotPort", StrRobotPort);
 	m_pArgs->add("-robotPort %s", StrRobotPort.c_str());
@@ -253,7 +255,7 @@ void Robot::log(bool bHeader)
 	conditionalLog("v", m_State.v, bHeader);
 	conditionalLog("w", m_State.w, bHeader);
 	conditionalLog("batVolt", m_State.batteryVolt, bHeader);
-	conditionalLog("isFollowing", m_State.isFollowing, bHeader);
+	conditionalLog("isFollowing", m_State.mode, bHeader);
 	conditionalLog("xVm", m_State.xVm, bHeader);
 	conditionalLog("yVm", m_State.yVm, bHeader);
 	conditionalLog("dist", m_State.dist, bHeader);
@@ -417,34 +419,48 @@ void Robot::increaseKappaBy(float deltaKappa)
 
 bool Robot::toggleFollowing()
 {
-	if (!m_State.isCalibrating)
+	if (m_State.mode == OM_Idle)
 	{
-		if (!m_State.isFollowing)
-			m_State.isFollowing = true;
-		else {
-			m_State.isFollowing = false;
-			m_ControlCmd.v = 0;
-			m_ControlCmd.w = 0;
-		}
-			
-		return true; // succeeded
+		m_State.mode = OM_Following;
+	}
+	else if (m_State.mode == OM_Following) {
+		m_State.mode = OM_Idle;
+		m_ControlCmd.v = 0;
+		m_ControlCmd.w = 0;
 	}
 	else
 		return false; // failed
+	return true; // succeeded
 }
 
 bool Robot::toggleCalibration()
 {
-	if (!m_State.isFollowing)
+	if (m_State.mode == OM_Idle)
 	{
-		if (!m_State.isCalibrating)
-			m_State.isCalibrating = true;
-		else
-			m_State.isCalibrating = false;
-		return true; // succeeded
+		m_State.mode = OM_Calibrating;
+	}
+	else if (m_State.mode == OM_Calibrating) {
+		m_State.mode = OM_Idle;
 	}
 	else
 		return false; // failed
+	return true; // succeeded
+}
+
+bool Robot::toggleManual()
+{
+	if (m_State.mode == OM_Idle)
+	{
+		m_Params.controlMode = 3;
+		m_State.mode = OM_Manual;
+	}
+	else if (m_State.mode == OM_Manual) {
+		Config::Instance()->assign("controlMode", m_Params.controlMode);
+		m_State.mode = OM_Idle;
+	}
+	else
+		return false; // failed
+	return true; // succeeded
 }
 
 void Robot::updateVisualCmd(float x, float z)
@@ -489,7 +505,7 @@ bool Robot::isVisualCmdTooOld()
 
 void Robot::calcControl(float * pV, float * pW)
 {
-	if (m_Params.controlMode == 0 || m_State.isCalibrating) {
+	if (m_Params.controlMode == 0 || m_State.mode == OM_Calibrating) {
 		// Move to let the virtual marker approach the goal marker.
 #if 1
 		// float headingOfGoal;
@@ -578,6 +594,8 @@ void Robot::calcControl(float * pV, float * pW)
 		if (pV != NULL) *pV = m_ControlCmd.v;
 		m_ControlCmd.w = m_ControlCmd.v * m_ControlCmd.kappa;
 		if (pW != NULL) *pW = m_ControlCmd.w;
+		m_ControlCmd.v *= 0.95;
+		m_ControlCmd.kappa *= 0.95;
 	}
 
 }
@@ -591,11 +609,6 @@ void Robot::resetVisualCmd()
 	m_VisualCmd.rhoTilde = 0.0f;
 	m_VisualCmd.rhoDot = 0.0f;
 	m_VisualCmd.psiR = 0.0f;
-}
-
-void Robot::setCalibRobotLogging(bool bCalib)
-{
-	m_State.isCalibrating = bCalib;
 }
 
 void Robot::recordDesiredPath()

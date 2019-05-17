@@ -33,6 +33,8 @@ desiredPathSpeed=0.85
 odometry/thCorrectionFactor/P3AT=0.280
 odometry/thCorrectionFactor/P3DX=4.012
 
+manualAttenuationFactor=0.96
+
 # Control modes.
 # 0: Longitudal position control based on follower distance PLUS angular velocity control based on gesture
 # 1: Fixed speed path following control

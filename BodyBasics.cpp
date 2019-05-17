@@ -208,6 +208,12 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 		{ &m_hWndButtonFollow, L"BUTTON", L"Start following",
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
 
+		{ &m_hWndButtonManual, L"BUTTON", L"Start Manual",
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
+
+		{ &m_hWndButtonReserved, L"BUTTON", L"Reserved",
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
+
 		{ &m_hWndButtonCalibrate, L"BUTTON", L"Start Calibration",
 		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, widthButton, heightButton },
 
@@ -252,6 +258,7 @@ int CBodyBasics::Run(HINSTANCE hInstance, int nCmdShow)
 	// Register hotkeys
 	RegisterHotKey(hWndApp, 1, MOD_CONTROL | MOD_NOREPEAT, 'F');
 	RegisterHotKey(hWndApp, 2, MOD_CONTROL | MOD_NOREPEAT, 'C');
+	RegisterHotKey(hWndApp, 3, MOD_NOREPEAT, VK_F5);
 
     // Show window
     ShowWindow(hWndApp, SW_MAXIMIZE);//nCmdShow
@@ -331,7 +338,7 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVe
 	{
 	case CS_Inactive:
 	{
-		if (m_pRobot->getState()->isCalibrating)
+		if (m_pRobot->getState()->mode == OM_Calibrating)
 		{
 			// --- Start Calibration ---
 			
@@ -367,7 +374,7 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVe
 
 		}
 		// Check if a request to stop calibration is received
-		if (m_pRobot->getState()->isCalibrating == false) m_pCalibState = CS_Aborted;
+		if (m_pRobot->getState()->mode != OM_Calibrating) m_pCalibState = CS_Aborted;
 		break;
 	}
 
@@ -422,7 +429,7 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVe
 		
 
 		// Check if a request to stop calibration is received
-		if (m_pRobot->getState()->isCalibrating == false) m_pCalibState = CS_Aborted;
+		if (m_pRobot->getState()->mode != OM_Calibrating) m_pCalibState = CS_Aborted;
 		break;
 	}
 	
@@ -466,7 +473,7 @@ void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVe
 		else if (m_pCalibState == CS_Aborted)
 			SetWindowText(m_hWndStatic, L" Calibration: Aborted");
 		
-		if (m_pRobot->getState()->isCalibrating)
+		if (m_pRobot->getState()->mode == OM_Calibrating)
 		{
 			if (!m_pRobot->toggleCalibration())
 				SetWindowText(m_hWndStatic, L"Unexpected error occurred!");
@@ -500,33 +507,50 @@ void CBodyBasics::onPressingButtonCalibrate()
 		updateButtons();	
 }
 
+void CBodyBasics::onPressingButtonManual()
+{
+	if (!m_pRobot->toggleManual())
+		SetWindowText(m_hWndStatic, L"Manual cannot start while not idle.");
+	else
+		updateButtons();
+}
+
 void CBodyBasics::updateButtons()
 {
 	pcRobotState pcState = m_pRobot->getState();
-	if (pcState->isCalibrating == true)
+	if (pcState->mode == OM_Idle) {
+		EnableWindow(m_hWndButtonFollow, true);
+		EnableWindow(m_hWndButtonCalibrate, true);
+		EnableWindow(m_hWndButtonManual, true);
+		EnableWindow(m_hWndButtonLoad, true);
+		EnableWindow(m_hWndButtonTestCalibSolver, true);
+		SetWindowText(m_hWndButtonCalibrate, L" Start Calibration");
+		SetWindowText(m_hWndButtonFollow, L" Start Following");
+		SetWindowText(m_hWndButtonManual, L" Start Manual");
+	}
+	else if (pcState->mode == OM_Calibrating)
 	{
 		EnableWindow(m_hWndButtonFollow, false);
+		EnableWindow(m_hWndButtonManual, false);
 		EnableWindow(m_hWndButtonLoad, false);
 		EnableWindow(m_hWndButtonTestCalibSolver, false);
 		SetWindowText(m_hWndButtonCalibrate, L" Stop Calibration");
 	}
-	else
-	{
-		EnableWindow(m_hWndButtonFollow, true);
-		EnableWindow(m_hWndButtonLoad, true);
-		EnableWindow(m_hWndButtonTestCalibSolver, true);
-		SetWindowText(m_hWndButtonCalibrate, L" Start Calibration");
-	}
-
-	if (pcState->isFollowing == true)
+	else if (pcState->mode == OM_Following)
 	{
 		EnableWindow(m_hWndButtonCalibrate, false);
+		EnableWindow(m_hWndButtonManual, false);
+		EnableWindow(m_hWndButtonLoad, false);
+		EnableWindow(m_hWndButtonTestCalibSolver, false);
 		SetWindowText(m_hWndButtonFollow, L" Stop Following");
 	}
-	else
+	else if (pcState->mode == OM_Manual)
 	{
-		EnableWindow(m_hWndButtonCalibrate, true);
-		SetWindowText(m_hWndButtonFollow, L" Start Following");
+		EnableWindow(m_hWndButtonFollow, false);
+		EnableWindow(m_hWndButtonCalibrate, false);
+		EnableWindow(m_hWndButtonLoad, false);
+		EnableWindow(m_hWndButtonTestCalibSolver, false);
+		SetWindowText(m_hWndButtonManual, L" Stop Manual");
 	}
 }
 
@@ -664,11 +688,11 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				onPressingButtonFollow();
 				break;
 			case 2:
-				if (m_pRobot && m_pRobot->getControlMode() == 3 && m_pRobot->getState()->isFollowing)
-					m_pRobot->setCmdV(0.8 * m_pRobot->getState()->v);
-				else
-					onPressingButtonCalibrate();
+				onPressingButtonManual();
+				//onPressingButtonCalibrate();
 				break;
+			case 3:
+				DestroyWindow(hWnd);
 			}
 			break;
 		}
@@ -684,6 +708,10 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 				else if (m_hWndButtonCalibrate == hButton)
 				{
 					onPressingButtonCalibrate();
+				}
+				else if (m_hWndButtonManual == hButton)
+				{
+					onPressingButtonManual();
 				}
 				else if (m_hWndButtonOpenConfig == hButton)
 				{
@@ -753,7 +781,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 		{
 			float wheelSpeed = (int)(wParam) >> 16;
 			bool halt = wParam & MK_MBUTTON;
-			if (m_pRobot && m_pRobot->getState()->isFollowing && m_pRobot->getControlMode() == 3) {
+			if (m_pRobot && m_pRobot->getState()->mode == OM_Manual) {
 				if (halt) m_pRobot->setCmdV(0.0f);
 				else m_pRobot->accelerateVBy(wheelSpeed / 6000);
 			}

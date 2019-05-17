@@ -148,6 +148,8 @@ private:
 
 	// Interface
 	HWND					m_hWndButtonFollow;
+	HWND					m_hWndButtonManual;
+	HWND					m_hWndButtonReserved;
 	HWND					m_hWndButtonCalibrate;
 	HWND					m_hWndButtonOpenConfig;
 	HWND					m_hWndButtonLoad;
@@ -177,6 +179,7 @@ private:
 
 	inline void				onPressingButtonFollow();
 	inline void				onPressingButtonCalibrate();
+	inline void				onPressingButtonManual();
 	inline void				updateButtons();
     /// <summary>
     /// Main processing function

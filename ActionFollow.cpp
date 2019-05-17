@@ -29,7 +29,7 @@ ArActionDesired *ActionFollow::fire(ArActionDesired currentDesired)
 	float v, w;
 	m_pRobot->calcControl(&v, &w);
 
-	if (pcState->isFollowing || pcState->isCalibrating)
+	if (pcState->mode == OM_Following || pcState->mode == OM_Calibrating || pcState->mode ==  OM_Manual)
 	{
 		m_ActionDesired.setVel(v * 1000.0);
 		m_ActionDesired.setRotVel(w * 180.0 / M_PI*1.25);
