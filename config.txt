@@ -5,7 +5,7 @@ dataPath=.\data\
 RobotSel=/P3DX # P3AT, P3DX
 
 # This group of params can only updated before startup
-robotPort=COM4
+robotPort=COM5
 laser/enabled=false
 laser/port=COM3
 
@@ -19,7 +19,7 @@ wScale=0.1
 vMax=0.8
 wMax=2.4
 kappaMax=10
-aLateralMax=0.35
+aLateralMax=0.25
 
 # Path following control parameters
 kSatPath=0.3
@@ -33,7 +33,7 @@ desiredPathSpeed=0.85
 odometry/thCorrectionFactor/P3AT=0.980
 odometry/thCorrectionFactor/P3DX=1.003
 
-manualAttenuationFactor=0.96
+manualAttenuationFactor=0.93
 
 # Control modes.
 # 0: Longitudal position control based on follower distance PLUS angular velocity control based on gesture
@@ -48,17 +48,21 @@ controlMode=1
 
 # ************ PATH SELECTION ************
 pathType=PathU
-PathU/paramGroupSel=/1
+PathU/paramGroupSel=/3
 
 # CW
 PathU/straight_part_len/1=1.5
 PathU/radius/1=0.8
 pathU/numReps/1=9.95
+odometry/thCorrectionFactor/P3AT/1=0.980
+odometry/thCorrectionFactor/P3DX/1=1.003
 
 # CCW
 PathU/straight_part_len/2=1.5
 PathU/radius/2=-0.8
 pathU/numReps/2=9.95
+odometry/thCorrectionFactor/P3AT/2=0.980
+odometry/thCorrectionFactor/P3DX/2=1.013
 
 # Straight line
 PathU/straight_part_len/3=6

@@ -202,8 +202,10 @@ void Robot::setParams()
 	pConfig->assign("desiredPathSpeed", m_Params.desiredPathSpeed);
 
 	std::string strRobotSel;
+	std::string strParamGroupSel;
 	pConfig->assign("RobotSel", strRobotSel);
-	pConfig->assign("odometry/thCorrectionFactor" + strRobotSel, m_Params.thCorrectionFactor);
+	pConfig->assign("PathU/paramGroupSel", strParamGroupSel);
+	pConfig->assign("odometry/thCorrectionFactor" + strRobotSel + strParamGroupSel, m_Params.thCorrectionFactor);
 
 	m_Params.manualAttenuationFactor = 0.95;
 	pConfig->assign("manualAttenuationFactor", m_Params.manualAttenuationFactor);
