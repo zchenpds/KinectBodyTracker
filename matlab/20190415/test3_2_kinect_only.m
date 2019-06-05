@@ -62,7 +62,7 @@ grid on;
 legend([h11, h12], "Left", "Right")
 ylabel("X Coordinates (m)")
 xlabel("Time (s)");
-title("Ankle");
+title(sprintf("Ankle, %.2f %%", length(ts)/30/(ts(end) - ts(1)) * 100));
 
 ax2 = subplot(3, 1, 2);
 h11 = plot(ts, yL, '.-r');
