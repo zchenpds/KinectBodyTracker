@@ -93,6 +93,7 @@ Robot::Robot() :
 
 Robot::~Robot()
 {
+	m_Mutex.lock();
 	m_pArRobot->disableMotors();
 	Aria::exit(1);
 	delete m_pRobotConn;
@@ -248,7 +249,7 @@ int Robot::getControlMode()
 
 void Robot::log(bool bHeader)
 {
-	
+	m_Mutex.lock();
 	conditionalLog("tR", m_State.tsRobot, bHeader);
 	conditionalLog("tRW", m_State.tsWindows, bHeader);
 	conditionalLog("x", m_State.x, bHeader);
@@ -281,6 +282,7 @@ void Robot::log(bool bHeader)
 	conditionalLog("xVmD", m_State.xVmDesired, bHeader);
 	conditionalLog("yVmD", m_State.yVmDesired, bHeader);
 	logEOL();
+	m_Mutex.unlock();
 }
 
 void Robot::updateState() // To do: add mutex.
