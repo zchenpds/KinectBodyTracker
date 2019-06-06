@@ -6,7 +6,14 @@ if isequal(filename1,0)
    disp('Cannot open data file. User selected Cancel');
    return
 end
-dataKinect = importKinectData([pathname1,filename1]);
+fileandpath1 = [pathname1,filename1];
+try
+    dataKinect = importKinectData(fileandpath1);
+catch
+    fileID = fopen(fileandpath1,'r');
+    dataArray = textscan(fileID, '%s','delimiter','\r\n');
+    dataKinect = importKinectData(fileandpath1, 2, size(dataArray{1}, 1) -1);
+end
 
 [filename2, pathname2] = uigetfile([pathname1,filename1(1:22),'*Insole.mat']);
 if isequal(filename2,0)
