@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <mutex>
 
 // This is a data logger class
 class BaseLogger
@@ -7,6 +8,7 @@ class BaseLogger
 private:
 	std::ofstream m_DataFile;
 protected:
+	std::mutex m_Mutex;
 	static std::string s_strDataPath;
 	static time_t m_rawtime; // the number of seconds elapsed since 1900 at 00:00 UTC
 public:

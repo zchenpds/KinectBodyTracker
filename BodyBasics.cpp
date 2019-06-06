@@ -129,6 +129,8 @@ CBodyBasics::CBodyBasics() :
 /// </summary>
 CBodyBasics::~CBodyBasics()
 {
+
+	m_Mutex.lock();
 	delete m_pRobot;
 	delete m_pSyncSocket;
 	delete m_pRosSocket;
@@ -153,6 +155,7 @@ CBodyBasics::~CBodyBasics()
     }
 
     SafeRelease(m_pKinectSensor);
+	m_Mutex.unlock();
 }
 
 /// <summary>
@@ -302,6 +305,7 @@ void CBodyBasics::setParams()
 
 void CBodyBasics::log(bool bHeader)
 {
+	m_Mutex.lock();
 	conditionalLog("tO", m_pSyncSocket->m_tsOdroid, bHeader);
 	conditionalLog("tOW", m_pSyncSocket->m_tsWindows, bHeader);
 	conditionalLog("trigger", m_pSyncSocket->m_tsSquareWave, bHeader);
@@ -317,6 +321,7 @@ void CBodyBasics::log(bool bHeader)
 	for (int i = 0; i < JOINT_DATA_SIZE; i++)
 		conditionalLog(m_JointDataW.names[i].c_str(), m_JointDataW.data[i], bHeader);
 	logEOL();
+	m_Mutex.unlock();
 }
 
 void CBodyBasics::calibrate(BodyTracker::rcVector3d pointLA_k, BodyTracker::rcVector3d pointRA_k)

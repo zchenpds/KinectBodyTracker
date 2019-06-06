@@ -306,7 +306,7 @@ CsvDataKinectRewriter::CsvDataKinectRewriter(const double * params) :
 
 void CsvDataKinectRewriter::log(bool bHeader)
 {
-	
+	m_Mutex.lock();
 	const static int indices[] = { m_pMapFieldIndex->find("tO")->second,
 		m_pMapFieldIndex->find("tOW")->second, m_pMapFieldIndex->find("trigger")->second
 	};
@@ -324,4 +324,5 @@ void CsvDataKinectRewriter::log(bool bHeader)
 	for (int i = 0; i < JOINT_DATA_SIZE; i++)
 		conditionalLog(m_JointDataW.names[i].c_str(), m_JointDataW.data[i], bHeader);
 	logEOL();
+	m_Mutex.unlock();
 }
