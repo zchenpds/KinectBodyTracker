@@ -3,11 +3,10 @@
 #include <string>
 
 
-RosSocket::RosSocket(Robot * pRobot):
+RosSocket::RosSocket():
 	m_pszRosMaster(NULL),
-	m_pRobot(pRobot),
-	m_Thread(&RosSocket::threadProc, this),
-	m_PubLaser("/scan", &m_MsgLaser)
+	m_PubSkeleton("/skeleton", &m_MsgSkeleton),
+	m_Thread(&RosSocket::threadProc, this)
 {	
 	std::string strRosMaster("192.168.1.116:11411");
 	Config* pConfig = Config::Instance();
@@ -21,8 +20,10 @@ RosSocket::RosSocket(Robot * pRobot):
 	//if (nh.connected() == false)
 	//	throw std::runtime_error("RosSocket initialization failed!\n");
 
-	
-	nh.advertise(m_PubLaser);
+	m_MsgSkeleton.header.frame_id = "/kinect2_link";
+	m_MsgSkeleton.header.seq = 0;
+	m_MsgSkeleton.point_length = JointType_Count;
+	nh.advertise(m_PubSkeleton);
 }
 
 
@@ -34,17 +35,25 @@ RosSocket::~RosSocket()
 
 void RosSocket::threadProc()
 {
-
-	if (!m_pRobot) throw std::runtime_error("Robot is not instantiated yet.\n");
 	while (1) {
-		// Laser
-		if (m_pRobot->getLaser() && m_pRobot->getLaser()->getReadingCount() > 0) {
-			// Populate message
-			//........
-			m_PubLaser.publish(&m_MsgLaser);
-		}
 		// Spin
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		nh.spinOnce();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
+}
+
+void RosSocket::publishMsgSkeleton(const Joint joints[JointType_Count])
+{
+	m_MsgSkeleton.header.seq++;
+	m_MsgSkeleton.header.stamp = nh.now();
+
+	geometry_msgs::Point jointPoints[JointType_Count];
+	for (int i = 0; i < JointType_Count; i++) {
+		jointPoints[i].x = joints[i].Position.X;
+		jointPoints[i].y = joints[i].Position.Y;
+		jointPoints[i].z = joints[i].Position.Z;
+	}
+
+	m_MsgSkeleton.point = jointPoints;
+	m_PubSkeleton.publish(&m_MsgSkeleton);
 }

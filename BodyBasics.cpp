@@ -669,7 +669,7 @@ LRESULT CALLBACK CBodyBasics::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LP
 			bool bRosSocketEnabled;
 			pConfig->assign("RosSocket/enabled", bRosSocketEnabled);
 			if (bRosSocketEnabled)
-				m_pRosSocket = new RosSocket(m_pRobot);
+				m_pRosSocket = new RosSocket();
 
 			SetFocus(hWnd);
         }
@@ -956,6 +956,8 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 		{
 			Joint joints[JointType_Count];
 			ppBodies[iClosest]->GetJoints(_countof(joints), joints);
+
+			m_pRosSocket->publishMsgSkeleton(joints);
 
 			float pxSum = 0, pzSum = 0;
 			int cnt = 0;
