@@ -44,6 +44,9 @@ void RosSocket::threadProc()
 
 void RosSocket::publishMsgSkeleton(const Joint joints[JointType_Count])
 {
+	bool bRosSocketEnabled;
+	Config::Instance()->assign("RosSocket/enabled", bRosSocketEnabled);
+	if (!bRosSocketEnabled) return;
 	m_MsgSkeleton.header.seq++;
 	m_MsgSkeleton.header.stamp = nh.now();
 
