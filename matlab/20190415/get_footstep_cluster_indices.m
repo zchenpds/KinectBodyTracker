@@ -18,14 +18,12 @@ function [i_start, i_end] = get_footstep_cluster_indices(x, y, t)
     i_end_cand = i_start_cand + 5;
 
     for k = 1:len
-        dist_sum = 0;
         num_outliers = 0;
         while i_end_cand(k) < len && i_end_cand(k) - i_start_cand(k) < 30 && ...
                 num_outliers < max_num_outliers && ...
                 t(i_end_cand(k)) - t(i_start_cand(k)) < t_threashold
             dist = norm( [x(i_start_cand(k)) - x(i_end_cand(k)), ...
                 y(i_start_cand(k)) - y(i_end_cand(k))] );
-            dist_sum = dist_sum + dist;
             i_end_cand(k) = i_end_cand(k) + 1;
             if dist > dist_threshold
                 num_outliers = num_outliers + 1;
