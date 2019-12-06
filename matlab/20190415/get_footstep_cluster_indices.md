@@ -15,5 +15,11 @@ This function takes three n-by-1 vectors, `x`, `y`, and `t` as inputs, represent
     3. the right endpoint of this interval reaches the last point in the input sequence.
 3. For each candidate interval [`i_start_cand(k)`, `i_end_cand(k)`], we assign its length to `sep_cand(k)`. Then we use `findpeaks` function on the vector `sep_cand`, with `MinPeakHeight = min_num_points` and `MinPeakDistance = min_peak_sep`.
 
+## Sensitivity Analysis
 
+Steps 1 and 2 above generate a sequence of overlapping time intervals (hereafter also referred to as [footstep] cluster candidates) such that, in each interval, the spatial distances between the first and the rest of the data points are below a distance threshold. By the criteria parameterized by `min_peak_sep`, `t_threashold`, and `min_num_points`, we intend to select the best such interval for each footstep out of those cluster candidates. Ideally, given the 30 Hz sampling frequency and the 0.6 s typical stance-phase duration (in our preliminary tests), there should be around 18 points for each footstep. But because the ankle joint is only approximately stationary during stance phase and occlusion could create some outliers, the number of data points remaining in the interval could be less than 18, depending on the distance threshold selected.
+
+In our case, increasing `min_num_points` from 10 by a small amount will still leave us with plenty of high quality clusters to work with while potentially further excluding lower quality clusters. On the other hand, reducing `min_num_points` will not lend us too many invalid clusters because of the restrictions imposed by the minimum duration `t_threashold` and minimum temporal separation `min_peak_sep`. These criteria are meant to work together to improve the possibly bad robustness that any one of the criteria might exhibit if used alone. 
+
+Since the value 1.0 s selected for minimum duration `t_threashold` is significantly larger than typical duration 0.6 s of a stance phase, no unintended rejection of valid clusters should occur even if `t_threashold` decreased by a small amount. The same can be said for `min_peak_sep` = 0.8 s as it is significantly smaller than the shortest stride time in in our preliminary tests (stride time = 1s).
 
